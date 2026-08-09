@@ -3,7 +3,7 @@
 This fictional example demonstrates the collection and configuration process.
 
 ```powershell
-$Path = 'C:\Program Files\Contoso\Agent\ContosoAgent.exe'
+$Path = 'C:\Program Files\Example Organization\Agent\ExampleAgent.exe'
 
 $Publisher = (Get-AppLockerFileInformation -Path $Path).Publisher
 $Publisher | Format-List PublisherName, ProductName, BinaryName, BinaryVersion
@@ -12,19 +12,19 @@ $Publisher | Format-List PublisherName, ProductName, BinaryName, BinaryVersion
 Example output:
 
 ```text
-PublisherName : O=CONTOSO B.V., L=HEERLEN, C=NL
-ProductName   : CONTOSO SOFTWARE AGENT
-BinaryName    : CONTOSOAGENT.EXE
+PublisherName : O=EXAMPLE ORGANIZATION, L=EXAMPLE CITY, C=US
+ProductName   : EXAMPLE SOFTWARE AGENT
+BinaryName    : EXAMPLEAGENT.EXE
 BinaryVersion : 1.0.0.0
 ```
 
 Configure one custom slot:
 
 ```text
-Name            = Contoso Software Agent
-Publisher       = O=CONTOSO B.V., L=HEERLEN, C=NL
-Product name    = CONTOSO SOFTWARE AGENT
-Executable      = CONTOSOAGENT.EXE
+Name            = Example Software Agent
+Publisher       = O=EXAMPLE ORGANIZATION, L=EXAMPLE CITY, C=US
+Product name    = EXAMPLE SOFTWARE AGENT
+Executable      = EXAMPLEAGENT.EXE
 Minimum version = 1.0.0.0
 ```
 

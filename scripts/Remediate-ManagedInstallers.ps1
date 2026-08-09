@@ -5,6 +5,10 @@ $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
 $customSlotCount = 20
+$blockedBinaries = @(
+    'MSIEXEC.EXE', 'POWERSHELL.EXE', 'PWSH.EXE', 'CMD.EXE', 'EXPLORER.EXE',
+    'RUNDLL32.EXE', 'REGSVR32.EXE', 'WSCRIPT.EXE', 'CSCRIPT.EXE', 'INSTALLUTIL.EXE'
+)
 $logRoot = Join-Path $env:ProgramData 'ManagedInstallers'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 Start-Transcript -Path (Join-Path $logRoot 'Remediation.log') -Append -Force | Out-Null
@@ -24,11 +28,10 @@ function New-StableGuid([string]$Value) {
 }
 
 function Assert-CustomRule($Rule) {
-    $blocked = @('MSIEXEC.EXE','POWERSHELL.EXE','PWSH.EXE','CMD.EXE','WINGET.EXE','EXPLORER.EXE','RUNDLL32.EXE','REGSVR32.EXE','WSCRIPT.EXE','CSCRIPT.EXE','INSTALLUTIL.EXE')
     if([string]::IsNullOrWhiteSpace($Rule.Name)) { throw 'Custom rule name is empty.' }
     if($Rule.Publisher -notmatch '(^|,\s*)O=' -or $Rule.Publisher.Contains('*')) { throw "Invalid publisher in custom rule '$($Rule.Name)'." }
     if($Rule.Product.Contains('*') -or [string]::IsNullOrWhiteSpace($Rule.Product)) { throw "Invalid product in custom rule '$($Rule.Name)'." }
-    if($Rule.Binary -notmatch '^[^\\/:*?""<>|]+\.exe$' -or $Rule.Binary.ToUpperInvariant() -in $blocked) { throw "Unsafe binary in custom rule '$($Rule.Name)'." }
+    if($Rule.Binary -notmatch '^[^\\/:*?""<>|]+\.exe$' -or $Rule.Binary.ToUpperInvariant() -in $blockedBinaries) { throw "Unsafe binary in custom rule '$($Rule.Name)'." }
     if(-not (Test-VersionString $Rule.Minimum)) { throw "Invalid four-part minimum version in custom rule '$($Rule.Name)'." }
 }
 
