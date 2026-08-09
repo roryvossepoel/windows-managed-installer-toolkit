@@ -44,8 +44,6 @@ CSCRIPT.EXE
 INSTALLUTIL.EXE
 ```
 
-`WINGET.EXE` is not blocked by the toolkit. This only means that the configuration passes input validation; it is not a recommendation to trust Winget in every environment. Review its sources, arguments, execution context, writable locations, and the software it can install before designating it as a Managed Installer.
-
 To extend the blocklist, add an uppercase executable name to `$blockedBinaries` in **both** detection and remediation. Keep the two lists identical so detection and remediation evaluate the same configuration. For example:
 
 ```powershell
