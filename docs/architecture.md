@@ -1,6 +1,6 @@
 # Architecture
 
-The toolkit separates configuration intent from enforcement and has a strict scope boundary: it configures only AppLocker Managed Installers. App Control policies remain completely outside the toolkit.
+The toolkit separates configuration intent from enforcement and has a strict scope boundary: it manages the AppLocker Managed Installer configuration used by App Control for Business. The App Control for Business policies themselves remain outside the toolkit.
 
 ```mermaid
 flowchart TD
@@ -9,7 +9,7 @@ flowchart TD
     B --> C[Detection and remediation]
     C --> D[Local AppLocker policy]
     D --> E[Managed Installer origin]
-    E --> F[App Control trust]
+    E --> F[App Control for Business trust]
 ```
 
 The dotted connection is intentionally manual. Endpoints never download library data.
