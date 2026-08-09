@@ -4,7 +4,7 @@
 
 Managed Installer is powerful but often underused. Intune's built-in controls currently expose only the Intune Management Extension as a Managed Installer, leaving other legitimate installer and updater services without an equally manageable configuration path. This toolkit provides that path while keeping each trust decision narrow, explicit, and tenant-controlled.
 
-The broader goal is to make a strong application-control trust model more practical. Application control is an effective barrier against unknown and malicious software; carefully selected Managed Installers can support that barrier without turning every legitimate software update into a separate policy-management task.
+The broader goal is to make a strong App Control for Business trust model more practical. App Control for Business is an effective barrier against unknown and malicious software; carefully selected Managed Installers can support that barrier without turning every legitimate software update into a separate policy-management task.
 
 ## Why are there no presets in the ADMX?
 
@@ -52,9 +52,9 @@ No. This toolkit intentionally rejects them. It creates narrow `FilePublisherRul
 
 Yes, the ADMX writes machine policy values. The detection/remediation scripts are still required to translate those values into the local AppLocker Managed Installer policy. If you do not use Intune Remediations, deploy and schedule the scripts with another SYSTEM-level management mechanism.
 
-## Does the toolkit configure App Control policies?
+## Does the toolkit configure complete App Control for Business policies?
 
-No. The toolkit exclusively configures the local AppLocker Managed Installer policy and its required runtime components. It does not create, inspect, modify, convert, or deploy App Control policies.
+No. The toolkit manages the local AppLocker Managed Installer policy and its required runtime components for use with App Control for Business. It does not create, inspect, modify, convert, or deploy the App Control for Business policies themselves.
 
 ## Does a library entry stay current automatically?
 
