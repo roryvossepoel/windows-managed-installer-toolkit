@@ -136,18 +136,24 @@ try {
         exit 0
     }
 
-    $appidtel = Start-Process "$env:windir\System32\appidtel.exe" -ArgumentList 'start -mionly' -Wait -PassThru -WindowStyle Hidden
-    if($appidtel.ExitCode -ne 0) { throw "appidtel.exe failed with exit code $($appidtel.ExitCode)." }
     $desiredPolicy = New-DesiredPolicy $desired
     Save-Policy $desiredPolicy -Merge
 
+    $appidtelPath = if([Environment]::Is64BitProcess) { "$env:windir\System32\appidtel.exe" } else { "$env:windir\Sysnative\appidtel.exe" }
+    $appidtel = Start-Process $appidtelPath -ArgumentList 'start -mionly' -Wait -PassThru -WindowStyle Hidden
+    if($appidtel.ExitCode -ne 0) { throw "appidtel.exe failed with exit code $($appidtel.ExitCode)." }
+
     $deadline = (Get-Date).AddMinutes(5)
+    $binaryRoot = if([Environment]::Is64BitProcess) { "$env:windir\System32" } else { "$env:windir\Sysnative" }
+    $managedInstallerPolicyPath = Join-Path $binaryRoot 'AppLocker\ManagedInstaller.AppLocker'
     do {
         $running = @('AppIDSvc','appid','applockerfltr' | Where-Object { (Get-Service $_ -ErrorAction SilentlyContinue).Status -eq 'Running' }).Count
-        if($running -eq 3) { break }
+        $policyBinaryExists = Test-Path -LiteralPath $managedInstallerPolicyPath
+        if($running -eq 3 -and $policyBinaryExists) { break }
         Start-Sleep 5
     } while((Get-Date) -lt $deadline)
     if($running -ne 3) { throw 'Timed out waiting for Managed Installer services.' }
+    if(-not $policyBinaryExists) { throw "Timed out waiting for the compiled Managed Installer policy: $managedInstallerPolicyPath" }
 
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
