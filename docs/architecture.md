@@ -1,1 +1,37 @@
-m«ë
+# Architecture
+
+The toolkit separates configuration intent from enforcement.
+
+```mermaid
+flowchart TD
+    L[GitHub example library] -. manual copy .-> A[ADMX custom slot]
+    A --> B[Policy registry]
+    B --> C[Detection and remediation]
+    C --> D[Local AppLocker policy]
+    D --> E[Managed Installer origin]
+    E --> F[App Control trust]
+```
+
+The dotted connection is intentionally manual. Endpoints never download library data.
+
+## ADMX layer
+
+The ADMX writes machine-scoped values below `HKLM\Software\Policies\ManagedInstallers`. It contains one global three-state setting and twenty custom publisher-rule slots. Each slot holds Name, Publisher, Product, Binary, and MinimumVersion.
+
+## Detection
+
+Detection validates enabled custom slots, derives a stable GUID from each slot number, compares the full publisher condition with effective AppLocker policy, identifies stale toolkit-owned rules, checks required services, and verifies the compiled Managed Installer policy binary.
+
+Exit code `0` means compliant or intentionally not configured; `1` requests remediation or reports invalid configuration.
+
+## Remediation
+
+Remediation removes toolkit-owned local rules, preserves unrelated local rules, builds the desired publisher rules from enabled custom slots, starts Managed Installer tracking, merges the policy, and verifies effective rule IDs.
+
+## Ownership and migration
+
+Rules have descriptions beginning with `ManagedInstallers:` and deterministic slot GUIDs. The two infrastructure rules have fixed IDs so the toolkit can reconcile only the policy objects it owns.
+
+## Important limitation
+
+`Set-AppLockerPolicy -Merge` does not remove omitted rules. Remediation therefore reconciles the complete local policy before merging the desired fragment. Test coexistence with every other AppLocker policy source in your environment.
