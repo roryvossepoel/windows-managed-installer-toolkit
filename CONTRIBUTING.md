@@ -6,7 +6,7 @@ Contributions are welcome through GitHub issues and pull requests.
 
 Include the purpose, vendor/channel and architecture, all five ADMX fields, the exact metadata-collection command, file version, sanitized evidence, and an assessment of what the process can install or execute. Verify that it is signed, not user-writable, and not a generic interpreter or launcher.
 
-Never propose `msiexec.exe`, PowerShell, Winget, `cmd.exe`, script hosts, living-off-the-land binaries, or a path rule as a Managed Installer.
+Do not propose generic interpreters, living-off-the-land binaries, or path rules as Managed Installers without a documented security assessment. Winget proposals must describe sources, arguments, execution context, writable locations, and installation scope.
 
 Library entries are copy-and-paste examples. Adding or correcting one must not require changes to the ADMX or runtime scripts.
 
