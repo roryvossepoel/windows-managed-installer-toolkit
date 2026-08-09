@@ -84,7 +84,8 @@ try {
     }
     foreach($serviceName in 'AppIDSvc','appid','applockerfltr') { if((Get-Service $serviceName -ErrorAction SilentlyContinue).Status -ne 'Running') { Write-Output "Noncompliant: service $serviceName"; exit 1 } }
     $binaryRoot = if([Environment]::Is64BitProcess) { "$env:windir\System32" } else { "$env:windir\Sysnative" }
-    if(-not (Test-Path (Join-Path $binaryRoot 'AppLocker\ManagedInstaller.AppLocker'))) { Write-Output 'Noncompliant: policy binary missing.'; exit 1 }
+    $managedInstallerPolicyPath = Join-Path $binaryRoot 'AppLocker\ManagedInstaller.AppLocker'
+    if(-not (Test-Path -LiteralPath $managedInstallerPolicyPath)) { Write-Output "Noncompliant: compiled policy missing: $managedInstallerPolicyPath"; exit 1 }
     Write-Output "Compliant: $($desired.Count) Managed Installer rule(s)."
     exit 0
 }
