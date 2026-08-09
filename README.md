@@ -2,7 +2,7 @@
 
 Deploy and maintain Windows Managed Installer publisher rules with an English ADMX/ADML and Microsoft Intune Remediations.
 
-The toolkit deliberately contains no built-in product presets. The ADMX provides twenty reusable custom-rule slots; administrators copy verified values from the [Managed Installer library](library/managed-installers.md), or collect values from their own signed installer.
+The toolkit deliberately contains no built-in product presets. The ADMX provides twenty reusable Managed Installer rule slots; administrators copy verified values from the [Managed Installer library](library/managed-installers.md), or collect values from their own signed installer.
 
 ## Why this design
 
@@ -15,25 +15,22 @@ The toolkit deliberately contains no built-in product presets. The ADMX provides
 
 ```text
 Managed Installers
-├── Manage Managed Installers
-└── Custom rules
-    ├── Custom Managed Installer 01
-    ├── ...
-    └── Custom Managed Installer 20
+├── Managed Installer 01
+├── ...
+└── Managed Installer 20
 ```
 
-Each custom slot contains Name, Publisher, Product name, Executable, and Minimum version. Slots use stable generated rule IDs, so changing a field updates the existing slot instead of accumulating rules.
+Each slot contains Display name, Publisher name, Product name, Binary name, and Minimum version. Slots use stable generated rule IDs, so changing a field updates the existing slot instead of accumulating rules.
 
 ## Quick start
 
 1. Import `admx/ManagedInstallers.admx` and `admx/en-US/ManagedInstallers.adml` into Intune.
 2. Create a device configuration profile from the imported administrative template.
-3. Enable **Manage Managed Installers**.
-4. Enable at least one custom slot and enter all five fields. You can copy an example from the [library](library/managed-installers.md).
+3. Enable at least one **Managed Installer 01–20** setting and enter all five fields. You can copy an example from the [library](library/managed-installers.md).
 5. Deploy `scripts/Detect-ManagedInstallers.ps1` and `scripts/Remediate-ManagedInstallers.ps1` as an Intune Remediation, running as SYSTEM in 64-bit PowerShell.
 6. Start with a test group and verify the effective AppLocker policy before broad deployment.
 
-The global policy is intentionally three-state: **Enabled** reconciles configured rules, **Disabled** removes only toolkit-owned rules, and **Not configured** makes no changes.
+Each rule is three-state. **Enabled** creates or updates that rule, **Disabled** removes it, and **Not configured** leaves that slot unmanaged. If no slots are configured, the scripts make no changes. Setting every previously used slot to Disabled provides explicit cleanup.
 
 ## Safety boundaries
 
@@ -46,7 +43,7 @@ The scripts accept signed publisher rules only. They reject wildcards, paths, an
 - [Architecture](docs/architecture.md)
 - [Intune deployment](docs/deployment-intune.md)
 - [Detection and remediation](docs/detection-and-remediation.md)
-- [Creating custom rules](docs/custom-rules.md)
+- [Creating Managed Installer rules](docs/custom-rules.md)
 - [Retrieving publisher information](docs/retrieving-publisher-information.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
