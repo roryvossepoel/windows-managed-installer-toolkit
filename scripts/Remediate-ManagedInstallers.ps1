@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
-$customSlotCount = 20
+$ruleSlotCount = 20
 $blockedBinaries = @(
     'MSIEXEC.EXE', 'POWERSHELL.EXE', 'PWSH.EXE', 'CMD.EXE', 'EXPLORER.EXE',
     'RUNDLL32.EXE', 'REGSVR32.EXE', 'WSCRIPT.EXE', 'CSCRIPT.EXE', 'INSTALLUTIL.EXE'
@@ -27,35 +27,40 @@ function New-StableGuid([string]$Value) {
     return ([guid]::new($bytes)).Guid
 }
 
-function Assert-CustomRule($Rule) {
-    if([string]::IsNullOrWhiteSpace($Rule.Name)) { throw 'Custom rule name is empty.' }
-    if($Rule.Publisher -notmatch '(^|,\s*)O=' -or $Rule.Publisher.Contains('*')) { throw "Invalid publisher in custom rule '$($Rule.Name)'." }
-    if($Rule.Product.Contains('*') -or [string]::IsNullOrWhiteSpace($Rule.Product)) { throw "Invalid product in custom rule '$($Rule.Name)'." }
-    if($Rule.Binary -notmatch '^[^\\/:*?""<>|]+\.exe$' -or $Rule.Binary.ToUpperInvariant() -in $blockedBinaries) { throw "Unsafe binary in custom rule '$($Rule.Name)'." }
-    if(-not (Test-VersionString $Rule.Minimum)) { throw "Invalid four-part minimum version in custom rule '$($Rule.Name)'." }
+function Assert-ManagedInstallerRule($Rule) {
+    if([string]::IsNullOrWhiteSpace($Rule.Name)) { throw 'Managed Installer rule name is empty.' }
+    if($Rule.Publisher -notmatch '(^|,\s*)O=' -or $Rule.Publisher.Contains('*')) { throw "Invalid publisher in Managed Installer rule '$($Rule.Name)'." }
+    if($Rule.Product.Contains('*') -or [string]::IsNullOrWhiteSpace($Rule.Product)) { throw "Invalid product in Managed Installer rule '$($Rule.Name)'." }
+    if($Rule.Binary -notmatch '^[^\\/:*?""<>|]+\.exe$' -or $Rule.Binary.ToUpperInvariant() -in $blockedBinaries) { throw "Unsafe binary in Managed Installer rule '$($Rule.Name)'." }
+    if(-not (Test-VersionString $Rule.Minimum)) { throw "Invalid four-part minimum version in Managed Installer rule '$($Rule.Name)'." }
 }
 
 function Get-DesiredRules {
     $rules = [Collections.Generic.List[object]]::new()
-    foreach($slotNumber in 1..$customSlotCount) {
+    foreach($slotNumber in 1..$ruleSlotCount) {
         $slot = '{0:D2}' -f $slotNumber
-        $path = Join-Path $policyRoot "Custom\$slot"
+        $path = Join-Path $policyRoot "Rules\$slot"
         if(-not (Test-Path $path)) { continue }
         $config = Get-ItemProperty $path
-        if([int]$config.Enabled -ne 1) { continue }
+        if($null -eq $config.PSObject.Properties['Enabled'] -or [int]$config.Enabled -ne 1) { continue }
         $rule = [pscustomobject]@{ Name=([string]$config.Name).Trim(); Publisher=([string]$config.Publisher).Trim(); Product=([string]$config.Product).Trim(); Binary=([string]$config.Binary).Trim().ToUpperInvariant(); Minimum=([string]$config.MinimumVersion).Trim() }
-        Assert-CustomRule $rule
-        $rule | Add-Member NoteProperty Id (New-StableGuid "CUSTOM-SLOT-$slot")
+        Assert-ManagedInstallerRule $rule
+        $rule | Add-Member NoteProperty Id (New-StableGuid "RULE-SLOT-$slot")
         $rules.Add($rule)
     }
     return $rules
 }
 
-function Get-ManagementValue {
-    if(-not (Test-Path -LiteralPath $policyRoot)) { return $null }
-    $policy = Get-ItemProperty -LiteralPath $policyRoot -ErrorAction SilentlyContinue
-    if($null -eq $policy -or $null -eq $policy.PSObject.Properties['Enabled']) { return $null }
-    return $policy.Enabled
+function Get-ConfiguredRuleCount {
+    $count = 0
+    foreach($slotNumber in 1..$ruleSlotCount) {
+        $slot = '{0:D2}' -f $slotNumber
+        $path = Join-Path $policyRoot "Rules\$slot"
+        if(-not (Test-Path -LiteralPath $path)) { continue }
+        $config = Get-ItemProperty -LiteralPath $path -ErrorAction SilentlyContinue
+        if($null -ne $config -and $null -ne $config.PSObject.Properties['Enabled']) { $count++ }
+    }
+    return $count
 }
 
 function Remove-OwnedRules([xml]$Policy) {
@@ -114,22 +119,19 @@ function New-DesiredPolicy([object[]]$Rules) {
 }
 
 try {
-    $managementValue = Get-ManagementValue
-    if($null -eq $managementValue) {
-        Write-Output 'Managed Installer management is not configured; no changes made.'
+    if((Get-ConfiguredRuleCount) -eq 0) {
+        Write-Output 'No Managed Installer rules are configured; no changes made.'
         Stop-Transcript | Out-Null
         exit 0
     }
-    $managementEnabled = [int]$managementValue -eq 1
-    $desired = if($managementEnabled) { @(Get-DesiredRules) } else { @() }
-    if($managementEnabled -and $desired.Count -eq 0) { throw 'Management is enabled but no custom rule is selected. Use Disabled for intentional cleanup.' }
+    $desired = @(Get-DesiredRules)
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     Remove-OwnedRules $local
     Save-Policy $local
     Write-Output 'Removed previous package-owned rules while preserving unrelated local AppLocker rules.'
 
-    if(-not $managementEnabled) {
-        Write-Output 'Managed Installer management is disabled; package-owned rules were removed.'
+    if($desired.Count -eq 0) {
+        Write-Output 'All configured Managed Installer rules are disabled; toolkit-owned rules were removed.'
         Stop-Transcript | Out-Null
         exit 0
     }
