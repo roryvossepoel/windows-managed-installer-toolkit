@@ -1,6 +1,6 @@
 # Architecture
 
-The toolkit separates configuration intent from enforcement.
+The toolkit separates configuration intent from enforcement and has a strict scope boundary: it configures only AppLocker Managed Installers. App Control policies remain completely outside the toolkit.
 
 ```mermaid
 flowchart TD
@@ -26,7 +26,7 @@ Exit code `0` means compliant or intentionally not configured; `1` requests reme
 
 ## Remediation
 
-Remediation removes toolkit-owned local rules, preserves unrelated local rules, builds the desired publisher rules from enabled slots, starts Managed Installer tracking, merges the policy, and verifies effective rule IDs. With configured but Disabled slots it performs cleanup without starting tracking.
+Remediation removes toolkit-owned local rules, preserves unrelated local rules, builds the desired publisher rules from enabled slots, starts Managed Installer tracking, captures the existing compiled-policy timestamp, merges the enabled Managed Installer collection, waits for the compiled policy to be created or updated, and verifies the effective mode and rule IDs. With configured but Disabled slots it performs cleanup without starting tracking.
 
 ## Ownership and migration
 
