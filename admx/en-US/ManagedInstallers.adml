@@ -1,27 +1,1 @@
-<?xml version="1.0" encoding="utf-8"?>
-<policyDefinitionResources revision="2.1" schemaVersion="1.0">
-  <displayName>Managed Installers</displayName>
-  <description>Configuration for controlled Windows Managed Installer rules.</description>
-  <resources>
-    <stringTable>
-      <string id="SUPPORTED_Windows10">Windows 10 and later</string>
-      <string id="Category_ManagedInstallers">Managed Installers</string>
-      <string id="Category_Presets">Presets</string><string id="Category_Custom">Custom</string>
-      <string id="EnableManagement">Manage Managed Installers</string>
-      <string id="EnableManagement_Help">Enabled applies the selected rules. Disabled removes only rules owned by this toolkit. Not Configured makes no changes.</string>
-      <string id="Preset_Common_Help">Central defaults are defined in the remediation script. Leave overrides empty to use those defaults. A configured override applies only to this policy. Minimum versions require four numeric parts, for example 143.0.7482.0. Use 0.0.0.0 to allow all versions.</string>
-      <string id="Preset_IME">Intune Management Extension</string><string id="Preset_OMADM">OMA Device Management Client</string><string id="Preset_EPM">Endpoint Privilege Management</string><string id="Preset_Autopatch">Windows Autopatch</string>
-      <string id="Preset_AdobeInstaller">Adobe Installer</string><string id="Preset_AdobeHelper">Adobe Install Helper</string><string id="Preset_AdobeUpdate">Adobe Update Service</string><string id="Preset_AcrobatService">Acrobat Update Service</string><string id="Preset_AdobeARM">Adobe Reader and Acrobat Manager</string>
-      <string id="Preset_GoogleUpdater">Google Updater</string>
-      <string id="Custom_Help">Enter publisher information exactly as shown in the digital signature. Paths, wildcards, and generic executables such as msiexec.exe, PowerShell, and Winget are rejected. Minimum versions require four numeric parts; use 0.0.0.0 for all versions.</string>
-      <string id="Custom01">Custom Managed Installer 01</string><string id="Custom02">Custom Managed Installer 02</string><string id="Custom03">Custom Managed Installer 03</string><string id="Custom04">Custom Managed Installer 04</string><string id="Custom05">Custom Managed Installer 05</string>
-      <string id="Custom06">Custom Managed Installer 06</string><string id="Custom07">Custom Managed Installer 07</string><string id="Custom08">Custom Managed Installer 08</string><string id="Custom09">Custom Managed Installer 09</string><string id="Custom10">Custom Managed Installer 10</string>
-      <string id="Custom11">Custom Managed Installer 11</string><string id="Custom12">Custom Managed Installer 12</string><string id="Custom13">Custom Managed Installer 13</string><string id="Custom14">Custom Managed Installer 14</string><string id="Custom15">Custom Managed Installer 15</string>
-      <string id="Custom16">Custom Managed Installer 16</string><string id="Custom17">Custom Managed Installer 17</string><string id="Custom18">Custom Managed Installer 18</string><string id="Custom19">Custom Managed Installer 19</string><string id="Custom20">Custom Managed Installer 20</string>
-    </stringTable>
-    <presentationTable>
-      <presentation id="PresetOptions"><textBox refId="MinimumVersion"><label>Minimum version override (optional)</label></textBox><textBox refId="ProductOverride"><label>Product name override (optional)</label></textBox></presentation>
-      <presentation id="CustomOptions"><textBox refId="Name"><label>Name</label></textBox><textBox refId="Publisher"><label>Publisher</label></textBox><textBox refId="Product"><label>Product name</label></textBox><textBox refId="Binary"><label>Executable</label></textBox><textBox refId="MinimumVersion"><label>Minimum version</label></textBox></presentation>
-    </presentationTable>
-  </resources>
-</policyDefinitionResources>
+m«ë
