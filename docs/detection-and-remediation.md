@@ -1,16 +1,16 @@
 # Detection and remediation
 
-| ADMX state | Detection | Remediation |
+| Rule-slot state | Detection | Remediation |
 |---|---|---|
-| Not Configured | Returns compliant | Makes no changes |
-| Enabled with custom rules | Compares desired and effective state | Reconciles desired rules |
-| Enabled without rules | Returns noncompliant | Stops with a configuration error |
-| Disabled | Checks that owned rules are absent | Removes owned rules |
+| No slots configured | Returns compliant | Makes no changes |
+| One or more slots Enabled | Compares desired and effective state | Reconciles enabled rules |
+| A slot Disabled | Checks that its rule is absent | Removes the rule |
+| All configured slots Disabled | Checks that toolkit rules are absent | Removes all toolkit-owned rules |
 
 ## Detection flow
 
-1. Read the global management state.
-2. Read enabled custom slots and validate every field.
+1. Determine whether any rule slot is configured.
+2. Read enabled slots and validate every field.
 3. Derive a stable rule ID from each slot number.
 4. Detect stale local toolkit-owned rules.
 5. Compare complete publisher conditions with effective policy.
@@ -18,14 +18,14 @@
 
 ## Remediation flow
 
-1. Build and validate the desired custom-rule set.
+1. Build and validate the desired Managed Installer rule set.
 2. Remove toolkit-owned rules from local policy while preserving unrelated rules.
 3. If management is Disabled, stop after cleanup.
 4. Start Managed Installer tracking.
 5. Generate and merge Managed Installer publisher rules.
 6. Wait for services and verify effective rule IDs.
 
-The scripts contain no product catalog and make no network request. Values originate only from ADMX-backed registry configuration.
+The scripts contain no product catalog and make no network request. Values originate only from ADMX-backed registry configuration below `HKLM\Software\Policies\ManagedInstallers\Rules`.
 
 ## Logging
 

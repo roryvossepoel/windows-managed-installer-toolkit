@@ -1,4 +1,4 @@
-# Custom rule example
+# Managed Installer rule example
 
 This fictional example demonstrates the collection and configuration process.
 
@@ -18,7 +18,7 @@ BinaryName    : EXAMPLEAGENT.EXE
 BinaryVersion : 1.0.0.0
 ```
 
-Configure one custom slot:
+Configure one Managed Installer slot:
 
 ```text
 Name            = Example Software Agent

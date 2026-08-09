@@ -12,13 +12,13 @@ Get-ChildItem 'HKLM:\Software\Policies\ManagedInstallers' -Recurse |
     }
 ```
 
-The global `Enabled` value must exist. `Not Configured` intentionally causes both scripts to make no changes.
+Rule configuration is stored below `HKLM:\Software\Policies\ManagedInstallers\Rules\01` through `20`. If none of these slots contains an `Enabled` value, detection returns compliant and remediation makes no changes.
 
-## Enabled without rules
+## No enabled rules
 
-The scripts reject a globally enabled configuration with no enabled custom slot. Enable at least one rule in the same profile, or set global management to Disabled for intentional cleanup.
+This is valid when one or more configured slots are Disabled. Remediation removes toolkit-owned rules and exits successfully. Use this as the explicit cleanup state before changing all slots to Not Configured.
 
-## Invalid custom rule
+## Invalid Managed Installer rule
 
 Check the Intune Remediation output and `%ProgramData%\ManagedInstallers\Remediation.log`. Common causes include:
 

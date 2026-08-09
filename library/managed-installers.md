@@ -1,6 +1,6 @@
 # Managed Installer library
 
-This is a copy-and-paste library for the twenty custom ADMX slots. It is documentation only: the ADMX and PowerShell scripts do not download or consume this file.
+This is a copy-and-paste library for the twenty Managed Installer ADMX slots. It is documentation only: the ADMX and PowerShell scripts do not download or consume this file.
 
 > Verify every value against a currently deployed, correctly signed binary before production use. Vendor channels, architectures, product names, certificates, and versions can differ. A minimum version of `0.0.0.0` trusts every signed version matching the other fields and should be a conscious choice.
 
