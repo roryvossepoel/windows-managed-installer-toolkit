@@ -48,12 +48,19 @@ function Get-DesiredRules {
     return $rules
 }
 
+function Get-ManagementValue {
+    if(-not (Test-Path -LiteralPath $policyRoot)) { return $null }
+    $policy = Get-ItemProperty -LiteralPath $policyRoot -ErrorAction SilentlyContinue
+    if($null -eq $policy -or $null -eq $policy.PSObject.Properties['Enabled']) { return $null }
+    return $policy.Enabled
+}
+
 function Get-RuleNodes([xml]$Policy) {
     @($Policy.AppLockerPolicy.RuleCollection | ForEach-Object { @($_.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' }) })
 }
 
 try {
-    $managementValue = if(Test-Path $policyRoot) { Get-ItemPropertyValue $policyRoot -Name Enabled -ErrorAction SilentlyContinue } else { $null }
+    $managementValue = Get-ManagementValue
     if($null -eq $managementValue) { Write-Output 'Compliant: management is not configured; no action requested.'; exit 0 }
     $managementEnabled = [int]$managementValue -eq 1
     $desired = if($managementEnabled) { @(Get-DesiredRules) } else { @() }
