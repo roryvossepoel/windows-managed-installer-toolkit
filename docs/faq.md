@@ -40,9 +40,9 @@ If no slots are configured, both scripts make no changes. For explicit full clea
 
 Publisher rules are safest when constrained by publisher, product, executable, and minimum version. The name is used for readable logs and policy descriptions.
 
-## Can I use `msiexec.exe`, PowerShell, CMD, or Winget as a Managed Installer?
+## Can I use generic executables as a Managed Installer?
 
-The scripts reject `msiexec.exe`, PowerShell, CMD, and several other generic launchers and interpreters by default. Winget is permitted by input validation, but this is not a blanket recommendation to trust it. Review its sources, arguments, execution context, writable locations, and the software it can install. The default list is stored in `$blockedBinaries` near the top of both scripts and can be extended; keep both copies identical.
+The scripts reject `msiexec.exe`, PowerShell, CMD, and several other generic launchers and interpreters by default. The default list is stored in `$blockedBinaries` near the top of both scripts and can be extended; keep both copies identical.
 
 ## Can I use wildcards or paths?
 
