@@ -2,7 +2,7 @@
 
 | ADMX state | Detection | Remediation |
 |---|---|---|
-| Not Configured | Returns compliant | Makes no changes |
+| Not Configured, including an existing policy key without `Enabled` | Returns compliant | Makes no changes |
 | Enabled with custom rules | Compares desired and effective state | Reconciles desired rules |
 | Enabled without rules | Returns noncompliant | Stops with a configuration error |
 | Disabled | Checks that owned rules are absent | Removes owned rules |
