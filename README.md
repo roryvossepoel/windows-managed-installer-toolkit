@@ -56,6 +56,7 @@ The scripts accept signed publisher rules only. They reject wildcards, paths, an
 - [Creating Managed Installer rules](docs/custom-rules.md)
 - [Retrieving publisher information](docs/retrieving-publisher-information.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Related resources and acknowledgements](docs/resources-and-acknowledgements.md)
 
 ## Versioning and contributions
 
