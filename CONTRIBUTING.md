@@ -14,7 +14,7 @@ Library entries are copy-and-paste examples. Adding or correcting one must not r
 
 1. Update `library/managed-installers.md` and `CHANGELOG.md` for library changes.
 2. Validate ADMX and ADML XML for policy changes.
-3. Keep custom slot identity and registry paths backward compatible.
+3. Keep rule-slot identity and registry paths backward compatible after the first stable release.
 4. Test on a device with and without existing local AppLocker policy.
 5. Describe security, removal, and upgrade behavior.
 
