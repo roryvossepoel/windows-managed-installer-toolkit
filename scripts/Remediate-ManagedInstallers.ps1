@@ -51,6 +51,13 @@ function Get-DesiredRules {
     return $rules
 }
 
+function Get-ManagementValue {
+    if(-not (Test-Path -LiteralPath $policyRoot)) { return $null }
+    $policy = Get-ItemProperty -LiteralPath $policyRoot -ErrorAction SilentlyContinue
+    if($null -eq $policy -or $null -eq $policy.PSObject.Properties['Enabled']) { return $null }
+    return $policy.Enabled
+}
+
 function Remove-OwnedRules([xml]$Policy) {
     $knownIds = $dummyRuleIds
     foreach($collection in @($Policy.AppLockerPolicy.RuleCollection)) {
@@ -107,7 +114,7 @@ function New-DesiredPolicy([object[]]$Rules) {
 }
 
 try {
-    $managementValue = if(Test-Path $policyRoot) { Get-ItemPropertyValue $policyRoot -Name Enabled -ErrorAction SilentlyContinue } else { $null }
+    $managementValue = Get-ManagementValue
     if($null -eq $managementValue) {
         Write-Output 'Managed Installer management is not configured; no changes made.'
         Stop-Transcript | Out-Null
