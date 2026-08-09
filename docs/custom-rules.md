@@ -4,10 +4,10 @@ The ADMX exposes twenty custom slots. Each enabled slot creates one publisher ru
 
 | Field | Example |
 |---|---|
-| Name | Contoso Software Agent |
-| Publisher | `O=CONTOSO B.V., L=HEERLEN, C=NL` |
-| Product name | `CONTOSO SOFTWARE AGENT` |
-| Executable | `CONTOSOAGENT.EXE` |
+| Name | Example Software Agent |
+| Publisher | `O=EXAMPLE ORGANIZATION, L=EXAMPLE CITY, C=US` |
+| Product name | `EXAMPLE SOFTWARE AGENT` |
+| Executable | `EXAMPLEAGENT.EXE` |
 | Minimum version | `1.0.0.0` |
 
 Use metadata collected with `Get-AppLockerFileInformation`; see [Retrieve publisher information](retrieving-publisher-information.md).
@@ -27,7 +27,34 @@ The scripts reject:
 - wildcards in publisher or product;
 - paths or invalid characters in executable names;
 - versions that don't contain four numeric parts;
-- generic and high-risk executables including `msiexec.exe`, PowerShell, Winget, `cmd.exe`, `explorer.exe`, `rundll32.exe`, `regsvr32.exe`, script hosts, and `installutil.exe`.
+- selected generic and high-risk executables.
+
+The default blocked binary list is defined near the top of both PowerShell scripts as `$blockedBinaries`. It contains:
+
+```text
+MSIEXEC.EXE
+POWERSHELL.EXE
+PWSH.EXE
+CMD.EXE
+EXPLORER.EXE
+RUNDLL32.EXE
+REGSVR32.EXE
+WSCRIPT.EXE
+CSCRIPT.EXE
+INSTALLUTIL.EXE
+```
+
+`WINGET.EXE` is not blocked by the toolkit. This only means that the configuration passes input validation; it is not a recommendation to trust Winget in every environment. Review its sources, arguments, execution context, writable locations, and the software it can install before designating it as a Managed Installer.
+
+To extend the blocklist, add an uppercase executable name to `$blockedBinaries` in **both** detection and remediation. Keep the two lists identical so detection and remediation evaluate the same configuration. For example:
+
+```powershell
+$blockedBinaries = @(
+    'MSIEXEC.EXE',
+    'POWERSHELL.EXE',
+    'MYGENERICLAUNCHER.EXE'
+)
+```
 
 This validation is a safety baseline, not a substitute for reviewing what the process can install and how an attacker might influence it.
 
@@ -41,10 +68,10 @@ This validation is a safety baseline, not a substitute for reviewing what the pr
 ## Example
 
 ```text
-Name: Contoso Software Agent
-Publisher: O=CONTOSO B.V., L=HEERLEN, C=NL
-Product name: CONTOSO SOFTWARE AGENT
-Executable: CONTOSOAGENT.EXE
+Name: Example Software Agent
+Publisher: O=EXAMPLE ORGANIZATION, L=EXAMPLE CITY, C=US
+Product name: EXAMPLE SOFTWARE AGENT
+Executable: EXAMPLEAGENT.EXE
 Minimum version: 1.0.0.0
 ```
 
@@ -52,9 +79,9 @@ The resulting condition is conceptually:
 
 ```xml
 <FilePublisherCondition
-  PublisherName="O=CONTOSO B.V., L=HEERLEN, C=NL"
-  ProductName="CONTOSO SOFTWARE AGENT"
-  BinaryName="CONTOSOAGENT.EXE">
+  PublisherName="O=EXAMPLE ORGANIZATION, L=EXAMPLE CITY, C=US"
+  ProductName="EXAMPLE SOFTWARE AGENT"
+  BinaryName="EXAMPLEAGENT.EXE">
   <BinaryVersionRange LowSection="1.0.0.0" HighSection="*" />
 </FilePublisherCondition>
 ```
