@@ -54,6 +54,15 @@ The detection script checks:
 
 On a 32-bit process running on 64-bit Windows it uses `Sysnative`. Confirm the remediation ran as SYSTEM in 64-bit PowerShell and that `Set-AppLockerPolicy` completed successfully.
 
+Remediation applies the AppLocker policy before running `appidtel.exe start -mionly`, then waits up to five minutes for the services and compiled policy. For manual inspection, run:
+
+```powershell
+Get-ChildItem "$env:windir\System32\AppLocker" -Force
+Get-AppLockerPolicy -Effective -Xml
+```
+
+The effective policy must contain EXE, DLL, and ManagedInstaller rule collections. If the rule is effective but `ManagedInstaller.AppLocker` is still absent after remediation, inspect the AppLocker/Application Identity event logs and the remediation transcript.
+
 ## Unexpected application blocks
 
 Immediately review all existing AppLocker collections. Empty collections configured as `NotConfigured` can become enforced after policy merges when a rule is added. The toolkit doesn't intentionally create empty Appx, MSI, or Script collections.
