@@ -2,6 +2,12 @@
 
 Deploy and maintain Windows Managed Installer publisher rules with an English ADMX/ADML and Microsoft Intune Remediations.
 
+Managed Installer is a powerful but underused Windows trust mechanism. Intune's built-in controls currently expose only the Intune Management Extension as a Managed Installer. This toolkit makes additional, deliberately selected installer and update services centrally configurable while keeping every trust decision explicit.
+
+The initiative is intended to help organizations develop a more practical trust model and adopt application control more broadly. Strong application control provides an important barrier against unknown and malicious software, while Managed Installer can reduce the operational burden of authorizing legitimate software delivery paths.
+
+The toolkit configures only the local AppLocker Managed Installer policy. It does not create, modify, convert, or deploy App Control policies.
+
 The toolkit deliberately contains no built-in product presets. The ADMX provides twenty reusable Managed Installer rule slots; administrators copy verified values from the [Managed Installer library](library/managed-installers.md), or collect values from their own signed installer.
 
 ## Why this design
