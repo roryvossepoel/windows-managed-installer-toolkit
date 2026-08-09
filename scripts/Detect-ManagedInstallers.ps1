@@ -60,7 +60,7 @@ try {
     $knownIds = $dummyRuleIds
     $localOwned = @(Get-RuleNodes $local | Where-Object { $description = [string]$_.Description; ([string]$_.Id -in $knownIds) -or @($managedMarkers | Where-Object {$description.StartsWith($_)}).Count -gt 0 })
     $desiredIds = @($desired.Id)
-    $stale = @($localOwned | Where-Object { ([string]$_.Id -notin $desiredIds) -and ([string]$_.Id -notin $dummyRuleIds })
+    $stale = @($localOwned | Where-Object { ([string]$_.Id -notin $desiredIds) -and ([string]$_.Id -notin $dummyRuleIds) })
     if($stale.Count -gt 0 -or ((-not $managementEnabled -or $desired.Count -eq 0) -and $localOwned.Count -gt 0)) { Write-Output 'Noncompliant: stale managed rules exist.'; exit 1 }
     if(-not $managementEnabled) { Write-Output 'Compliant: package-owned rules are removed.'; exit 0 }
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
