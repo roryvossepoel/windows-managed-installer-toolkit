@@ -1,6 +1,6 @@
-# Custom Managed Installer rules
+# Managed Installer rules
 
-The ADMX exposes twenty custom slots. Each enabled slot creates one publisher rule and requires five fields.
+The ADMX exposes twenty Managed Installer slots directly below the **Managed Installers** category. Each enabled slot creates one publisher rule and requires five fields.
 
 | Field | Example |
 |---|---|
@@ -12,9 +12,9 @@ The ADMX exposes twenty custom slots. Each enabled slot creates one publisher ru
 
 Use metadata collected with `Get-AppLockerFileInformation`; see [Retrieve publisher information](retrieving-publisher-information.md).
 
-## Slot identity
+## Slot identity and state
 
-Custom slot IDs are deterministic and based on the slot number, not its current contents. Editing Custom Managed Installer 04 therefore updates slot 04 instead of leaving an orphaned rule. Disabling the slot removes its rule during the next remediation.
+Slot IDs are deterministic and based on the slot number, not its current contents. Editing Managed Installer 04 therefore updates slot 04 instead of leaving an orphaned rule. Disabling the slot removes its rule during the next remediation. Not Configured leaves that slot unmanaged.
 
 Don't use one slot for multiple executables. Each binary needs its own publisher condition and slot.
 
