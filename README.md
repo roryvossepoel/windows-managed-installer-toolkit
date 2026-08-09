@@ -44,7 +44,7 @@ Each rule is three-state. **Enabled** creates or updates that rule, **Disabled**
 
 ## Safety boundaries
 
-The scripts accept signed publisher rules only. They reject wildcards, paths, and a configurable blocklist of high-risk generic executables. Winget is permitted by input validation but still requires an explicit security assessment. A Managed Installer is a trust boundary: software launched by it can receive Managed Installer origin, so use the narrowest practical publisher, product, executable, and minimum version.
+The scripts accept signed publisher rules only. They reject wildcards, paths, and a configurable blocklist of high-risk generic executables. A Managed Installer is a trust boundary: software launched by it can receive Managed Installer origin, so use the narrowest practical publisher, product, executable, and minimum version.
 
 ## Documentation
 
