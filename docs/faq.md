@@ -32,7 +32,7 @@ Publisher rules are safest when constrained by publisher, product, executable, a
 
 ## Can I use `msiexec.exe`, PowerShell, CMD, or Winget as a Managed Installer?
 
-No. The scripts reject generic launchers and interpreters because trusting them could allow unrelated content to inherit Managed Installer origin.
+The scripts reject `msiexec.exe`, PowerShell, CMD, and several other generic launchers and interpreters by default. Winget is permitted by input validation, but this is not a blanket recommendation to trust it. Review its sources, arguments, execution context, writable locations, and the software it can install. The default list is stored in `$blockedBinaries` near the top of both scripts and can be extended; keep both copies identical.
 
 ## Can I use wildcards or paths?
 
