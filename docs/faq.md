@@ -6,13 +6,13 @@ Vendor metadata and minimum versions change more often than policy structure. Ke
 
 ## Does the toolkit automatically consume the GitHub library?
 
-No. Copy the five values you want into a custom ADMX slot. Endpoints have no runtime dependency on GitHub and keep the values assigned through policy until you change them.
+No. Copy the five values you want into one of the Managed Installer rule slots. Endpoints have no runtime dependency on GitHub and keep the values assigned through policy until you change them.
 
 ## Why are there twenty slots?
 
 Classic ADMX presentation elements cannot dynamically add repeated structured records. Twenty fixed, clearly labeled slots provide native fields and predictable registry locations without asking administrators to paste JSON into Group Policy or Intune.
 
-Twenty is a practical default, not a platform limit. If an environment needs more, add matching `Custom21` (and later) policy definitions to the ADMX, add their display strings to every ADML language file, and increase `$customSlotCount` in both PowerShell scripts. Keep the two-digit registry layout (`Custom\21`) and never renumber existing slots, because the slot number determines rule identity. Validate the XML and both scripts after the change.
+Twenty is a practical default, not a platform limit. If an environment needs more, add matching `Rule21` (and later) policy definitions to the ADMX, add their display strings to every ADML language file, and increase `$ruleSlotCount` in both PowerShell scripts. Keep the two-digit registry layout (`Rules\21`) and never renumber existing slots, because the slot number determines rule identity. Validate the XML and both scripts after the change.
 
 For a broadly shared repository, keeping twenty slots avoids an unwieldy Administrative Templates interface. Environments regularly needing many more Managed Installers should first review whether every process truly needs this trust boundary; a separate generated configuration or policy-management solution may then be more maintainable than hundreds of ADMX fields.
 
@@ -20,13 +20,17 @@ For a broadly shared repository, keeping twenty slots avoids an unwieldy Adminis
 
 Each slot has a stable rule ID derived from its slot number. Remediation removes the old toolkit-owned form and writes the desired form, so field changes do not create duplicates.
 
-## What do Enabled, Disabled, and Not configured mean?
+## Why is there no global enable switch?
 
-- **Enabled:** reconcile all enabled custom slots.
-- **Disabled:** remove only rules owned by this toolkit.
-- **Not configured:** take no action and leave existing policy untouched.
+The individual slots already have three states, so a second master switch would duplicate intent and create conflicting combinations. Configuring one slot activates management automatically.
 
-## Why must every custom field be filled in?
+- **Enabled:** create or update this slot's Managed Installer rule.
+- **Disabled:** ensure this slot's rule is absent.
+- **Not configured:** do not manage this slot.
+
+If no slots are configured, both scripts make no changes. For explicit full cleanup, set every previously used slot to Disabled and run remediation before changing them to Not configured.
+
+## Why must every field be filled in?
 
 Publisher rules are safest when constrained by publisher, product, executable, and minimum version. The name is used for readable logs and policy descriptions.
 
@@ -48,7 +52,7 @@ Managed Installer tracking must be enabled in the deployed App Control policy. T
 
 ## Does a library entry stay current automatically?
 
-No. Treat each entry as a starting point and verify it against your deployed binary. If a vendor changes signing or version metadata, update your selected custom slot. The ADMX itself normally does not need to change.
+No. Treat each entry as a starting point and verify it against your deployed binary. If a vendor changes signing or version metadata, update the selected rule slot. The ADMX itself normally does not need to change.
 
 ## How do I find the exact publisher values?
 
