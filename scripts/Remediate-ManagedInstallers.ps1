@@ -1,6 +1,9 @@
 #requires -version 5.1
 
+# Toolkit version: 0.1.0
+
 $ErrorActionPreference = 'Stop'
+$toolkitVersion = '0.1.0'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
@@ -15,6 +18,7 @@ $policyBinaryTimeoutSeconds = 300
 $logRoot = Join-Path $env:ProgramData 'ManagedInstallers'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 Start-Transcript -Path (Join-Path $logRoot 'Remediation.log') -Append -Force | Out-Null
+Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
 
 function Test-VersionString([string]$Value) {
     if($Value -notmatch '^\d+\.\d+\.\d+\.\d+$') { return $false }

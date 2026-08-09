@@ -1,22 +1,35 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
+The project follows [Semantic Versioning](https://semver.org/). Git tags use the `vMAJOR.MINOR.PATCH` format.
 
 ## [Unreleased]
 
 ## [0.1.0] - 2026-08-09
 
+First prerelease of the App Control for Business Managed Installer Toolkit.
+
 ### Added
 
-- ADMX-backed Managed Installer configuration.
-- English `en-US` ADML resources.
-- Twenty structured Managed Installer rule slots.
-- A copy-and-paste library of common Managed Installer examples, independent of the ADMX and scripts.
-- A frequently asked questions guide.
+- Importable ADMX/ADML with twenty configurable Managed Installer rule slots.
 - Intune detection and remediation scripts.
-- Validation, deployment, metadata retrieval, and troubleshooting documentation.
+- Deterministic rule identities per ADMX slot.
+- Validation for publisher, product, binary, and minimum-version values.
+- Preservation of unrelated local AppLocker rules.
+- Example Managed Installer library and supporting documentation.
+- Remediation logging in `%ProgramData%\ManagedInstallers\Remediation.log`.
 
-[Unreleased]: https://github.com/roryvossepoel/windows-managed-installer-toolkit/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/roryvossepoel/windows-managed-installer-toolkit/releases/tag/v0.1.0
+### Fixed
+
+- Configure the Managed Installer collection as `Enabled` instead of `AuditOnly`.
+- Wait for `ManagedInstaller.AppLocker` to be created or updated before reporting success.
+- Verify the effective enforcement mode, required services, compiled policy, and desired rule IDs.
+
+### Scope
+
+- The toolkit manages the AppLocker Managed Installer configuration used by App Control for Business.
+- It does not create, inspect, modify, convert, or deploy App Control for Business policies.
+
+[Unreleased]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/releases/tag/v0.1.0

@@ -8,6 +8,10 @@ The initiative is intended to help organizations develop a more practical trust 
 
 The toolkit manages the Managed Installer component used by App Control for Business. It does not create, modify, convert, or deploy the App Control for Business policies themselves.
 
+## Release status
+
+The current toolkit version is **0.1.0**. It is published as a prerelease while the complete ADMX, Intune detection, remediation, and Windows Sandbox workflow is being validated. See [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 The toolkit deliberately contains no built-in product presets. The ADMX provides twenty reusable Managed Installer rule slots; administrators copy verified values from the [Managed Installer library](library/managed-installers.md), or collect values from their own signed installer.
 
 ## Why this design
@@ -33,8 +37,8 @@ Each slot contains Display name, Publisher name, Product name, Binary name, and 
 1. Import `admx/ManagedInstallers.admx` and `admx/en-US/ManagedInstallers.adml` into Intune.
 2. Create a device configuration profile from the imported administrative template.
 3. Enable at least one **Managed Installer 01–20** setting and enter all five fields. You can copy an example from the [library](library/managed-installers.md).
-5. Deploy `scripts/Detect-ManagedInstallers.ps1` and `scripts/Remediate-ManagedInstallers.ps1` as an Intune Remediation, running as SYSTEM in 64-bit PowerShell.
-6. Start with a test group and verify the effective AppLocker policy before broad deployment.
+4. Deploy `scripts/Detect-ManagedInstallers.ps1` and `scripts/Remediate-ManagedInstallers.ps1` as an Intune Remediation, running as SYSTEM in 64-bit PowerShell.
+5. Start with a test group and verify the effective AppLocker policy before broad deployment.
 
 Each rule is three-state. **Enabled** creates or updates that rule, **Disabled** removes it, and **Not configured** leaves that slot unmanaged. If no slots are configured, the scripts make no changes. Setting every previously used slot to Disabled provides explicit cleanup.
 
