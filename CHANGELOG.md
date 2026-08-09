@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - ADMX-backed Managed Installer configuration.
 - English `en-US` ADML resources.
-- Twenty structured custom Managed Installer slots.
+- Twenty structured Managed Installer rule slots.
 - A copy-and-paste library of common Managed Installer examples, independent of the ADMX and scripts.
 - A frequently asked questions guide.
 - Intune detection and remediation scripts.
