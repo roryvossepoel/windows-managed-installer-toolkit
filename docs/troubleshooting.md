@@ -12,7 +12,7 @@ Get-ChildItem 'HKLM:\Software\Policies\ManagedInstallers' -Recurse |
     }
 ```
 
-The global `Enabled` value must exist. `Not Configured` intentionally causes both scripts to make no changes.
+The policy root can exist before the global `Enabled` value has been written. This is treated as **Not Configured**: detection returns compliant and remediation makes no changes. Once the global policy is configured, `Enabled` must contain `1` (Enabled) or `0` (Disabled).
 
 ## Enabled without rules
 
