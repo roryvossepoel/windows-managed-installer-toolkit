@@ -9,6 +9,9 @@ $blockedBinaries = @(
     'MSIEXEC.EXE', 'POWERSHELL.EXE', 'PWSH.EXE', 'CMD.EXE', 'EXPLORER.EXE',
     'RUNDLL32.EXE', 'REGSVR32.EXE', 'WSCRIPT.EXE', 'CSCRIPT.EXE', 'INSTALLUTIL.EXE'
 )
+$binaryRoot = if([Environment]::Is64BitProcess) { "$env:windir\System32" } else { "$env:windir\Sysnative" }
+$managedInstallerPolicyPath = Join-Path $binaryRoot 'AppLocker\ManagedInstaller.AppLocker'
+$policyBinaryTimeoutSeconds = 300
 $logRoot = Join-Path $env:ProgramData 'ManagedInstallers'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 Start-Transcript -Path (Join-Path $logRoot 'Remediation.log') -Append -Force | Out-Null
@@ -111,7 +114,7 @@ function New-DesiredPolicy([object[]]$Rules) {
     <FilePathRule Id="9420c496-046d-45ab-bd0e-455b2649e41e" Name="Managed Installer benign EXE rule" Description="ManagedInstallers:Infrastructure" UserOrGroupSid="S-1-1-0" Action="Deny"><Conditions><FilePathCondition Path="%OSDRIVE%\ThisWillBeBlocked.exe" /></Conditions></FilePathRule>
     <RuleCollectionExtensions><ThresholdExtensions><Services EnforcementMode="Enabled" /></ThresholdExtensions><RedstoneExtensions><SystemApps Allow="Enabled" /></RedstoneExtensions></RuleCollectionExtensions>
   </RuleCollection>
-  <RuleCollection Type="ManagedInstaller" EnforcementMode="AuditOnly">
+  <RuleCollection Type="ManagedInstaller" EnforcementMode="Enabled">
     $($ruleXml -join [Environment]::NewLine)
   </RuleCollection>
 </AppLockerPolicy>
@@ -136,27 +139,34 @@ try {
         exit 0
     }
 
-    $desiredPolicy = New-DesiredPolicy $desired
-    Save-Policy $desiredPolicy -Merge
-
     $appidtelPath = if([Environment]::Is64BitProcess) { "$env:windir\System32\appidtel.exe" } else { "$env:windir\Sysnative\appidtel.exe" }
     $appidtel = Start-Process $appidtelPath -ArgumentList 'start -mionly' -Wait -PassThru -WindowStyle Hidden
     if($appidtel.ExitCode -ne 0) { throw "appidtel.exe failed with exit code $($appidtel.ExitCode)." }
 
-    $deadline = (Get-Date).AddMinutes(5)
-    $binaryRoot = if([Environment]::Is64BitProcess) { "$env:windir\System32" } else { "$env:windir\Sysnative" }
-    $managedInstallerPolicyPath = Join-Path $binaryRoot 'AppLocker\ManagedInstaller.AppLocker'
+    $previousBinaryTimestamp = if(Test-Path -LiteralPath $managedInstallerPolicyPath) {
+        (Get-Item -LiteralPath $managedInstallerPolicyPath -ErrorAction Stop).LastWriteTimeUtc
+    } else { $null }
+
+    $desiredPolicy = New-DesiredPolicy $desired
+    Save-Policy $desiredPolicy -Merge
+
+    $deadline = (Get-Date).AddSeconds($policyBinaryTimeoutSeconds)
     do {
         $running = @('AppIDSvc','appid','applockerfltr' | Where-Object { (Get-Service $_ -ErrorAction SilentlyContinue).Status -eq 'Running' }).Count
-        $policyBinaryExists = Test-Path -LiteralPath $managedInstallerPolicyPath
-        if($running -eq 3 -and $policyBinaryExists) { break }
+        $policyBinaryUpdated = $false
+        if(Test-Path -LiteralPath $managedInstallerPolicyPath) {
+            $currentBinaryTimestamp = (Get-Item -LiteralPath $managedInstallerPolicyPath -ErrorAction Stop).LastWriteTimeUtc
+            $policyBinaryUpdated = ($null -eq $previousBinaryTimestamp) -or ($currentBinaryTimestamp -gt $previousBinaryTimestamp)
+        }
+        if($running -eq 3 -and $policyBinaryUpdated) { break }
         Start-Sleep 5
     } while((Get-Date) -lt $deadline)
     if($running -ne 3) { throw 'Timed out waiting for Managed Installer services.' }
-    if(-not $policyBinaryExists) { throw "Timed out waiting for the compiled Managed Installer policy: $managedInstallerPolicyPath" }
+    if(-not $policyBinaryUpdated) { throw "Managed Installer policy binary was not created or updated within $policyBinaryTimeoutSeconds seconds: $managedInstallerPolicyPath" }
 
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
+    if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { throw 'Managed Installer rule collection is not enabled after remediation.' }
     foreach($rule in $desired) {
         if(-not @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id })) { throw "Rule missing after remediation: $($rule.Name)" }
     }
