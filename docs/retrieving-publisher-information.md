@@ -71,4 +71,4 @@ Before designating the binary as a Managed Installer, ask:
 - Does it install kernel drivers that still require explicit App Control authorization?
 - Would an explicit signer rule be safer and sufficient?
 
-Avoid designating generic installation engines or interpreters without a specific security assessment. The toolkit blocks several high-risk binaries by default. Winget is permitted by input validation, but its configured sources, arguments, execution context, writable locations, and installation scope must be reviewed before it is trusted.
+Avoid designating generic installation engines or interpreters without a specific security assessment. The toolkit blocks several high-risk binaries by default.
