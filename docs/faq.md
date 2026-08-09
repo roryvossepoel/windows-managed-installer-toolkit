@@ -1,5 +1,11 @@
 # Frequently asked questions
 
+## Why was this toolkit created?
+
+Managed Installer is powerful but often underused. Intune's built-in controls currently expose only the Intune Management Extension as a Managed Installer, leaving other legitimate installer and updater services without an equally manageable configuration path. This toolkit provides that path while keeping each trust decision narrow, explicit, and tenant-controlled.
+
+The broader goal is to make a strong application-control trust model more practical. Application control is an effective barrier against unknown and malicious software; carefully selected Managed Installers can support that barrier without turning every legitimate software update into a separate policy-management task.
+
 ## Why are there no presets in the ADMX?
 
 Vendor metadata and minimum versions change more often than policy structure. Keeping examples in a GitHub library avoids ADMX reimports and script releases whenever an entry changes. It also prevents a library update from silently changing a tenant's trust boundary.
@@ -46,9 +52,9 @@ No. This toolkit intentionally rejects them. It creates narrow `FilePublisherRul
 
 Yes, the ADMX writes machine policy values. The detection/remediation scripts are still required to translate those values into the local AppLocker Managed Installer policy. If you do not use Intune Remediations, deploy and schedule the scripts with another SYSTEM-level management mechanism.
 
-## Why is App Control option 13 required?
+## Does the toolkit configure App Control policies?
 
-Managed Installer tracking must be enabled in the deployed App Control policy. This toolkit manages the AppLocker Managed Installer collection; it does not replace the App Control policy that consumes Managed Installer origin.
+No. The toolkit exclusively configures the local AppLocker Managed Installer policy and its required runtime components. It does not create, inspect, modify, convert, or deploy App Control policies.
 
 ## Does a library entry stay current automatically?
 
