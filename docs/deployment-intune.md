@@ -13,12 +13,11 @@ In the Intune admin center:
 
 1. Create a Windows profile using **Imported Administrative templates**.
 2. Open **Managed Installers**.
-3. Set **Manage Managed Installers** to **Enabled**.
-4. Enable at least one rule under **Custom rules**.
-5. Enter all five fields, using a verified local binary or the [example library](../library/managed-installers.md) as a starting point.
-6. Assign the profile to a device-based pilot group.
+3. Enable at least one **Managed Installer 01–20** setting.
+4. Enter all five fields, using a verified local binary or the [example library](../library/managed-installers.md) as a starting point.
+5. Assign the profile to a device-based pilot group.
 
-Don't enable management without selecting any rule. The scripts treat that state as a configuration error. Use **Disabled** when you intentionally want to remove all toolkit-owned rules.
+There is no global enable switch. To remove a rule, set its slot to **Disabled**. To explicitly remove all toolkit-owned rules, set every previously used slot to Disabled. If no slots are configured, the scripts intentionally make no changes.
 
 ## 3. Create the Remediation
 
@@ -44,12 +43,12 @@ Validate at least:
 
 1. a device without an existing AppLocker policy;
 2. a device with unrelated local AppLocker rules;
-3. custom slot addition, modification, disablement, and reuse;
+3. rule-slot addition, modification, disablement, and reuse;
 4. minimum-version enforcement;
-6. global `Not Configured`, `Enabled`, and `Disabled` behavior;
+6. per-slot `Not Configured`, `Enabled`, and `Disabled` behavior;
 7. application installation and subsequent update behavior;
 8. AppLocker and Code Integrity event logs.
 
 ## Updating rule details
 
-Change the assigned custom-slot values and let remediation reconcile the same stable slot ID. The scripts and ADMX do not need an update when a vendor changes publisher metadata or a recommended minimum version. Reimport the ADMX only when its policy schema changes.
+Change the assigned slot values and let remediation reconcile the same stable slot ID. The scripts and ADMX do not need an update when a vendor changes publisher metadata or a recommended minimum version. Reimport the ADMX only when its policy schema changes.
