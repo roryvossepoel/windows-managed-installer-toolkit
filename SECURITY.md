@@ -8,4 +8,4 @@ Include the affected version, configuration, reproduction steps, and expected se
 
 ## Security boundaries
 
-Managed Installer is a heuristic trust mechanism. A process designated as a Managed Installer can cause files it writes to be trusted by an App Control policy that enables Managed Installer trust. Review every custom publisher rule as a security boundary change.
+Managed Installer is a heuristic trust mechanism. A process designated as a Managed Installer can cause files it writes to be trusted by an App Control policy that enables Managed Installer trust. Review every publisher rule as a security boundary change.
