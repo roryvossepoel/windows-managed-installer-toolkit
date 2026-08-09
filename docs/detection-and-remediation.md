@@ -21,9 +21,10 @@
 1. Build and validate the desired Managed Installer rule set.
 2. Remove toolkit-owned rules from local policy while preserving unrelated rules.
 3. If management is Disabled, stop after cleanup.
-4. Start Managed Installer tracking.
-5. Generate and merge Managed Installer publisher rules.
-6. Wait for services and verify effective rule IDs.
+4. Generate and merge Managed Installer publisher rules.
+5. Start Managed Installer tracking with `appidtel.exe start -mionly` after the policy is applied.
+6. Wait for the three required services and the compiled `ManagedInstaller.AppLocker` policy file.
+7. Verify effective rule IDs.
 
 The scripts contain no product catalog and make no network request. Values originate only from ADMX-backed registry configuration below `HKLM\Software\Policies\ManagedInstallers\Rules`.
 
