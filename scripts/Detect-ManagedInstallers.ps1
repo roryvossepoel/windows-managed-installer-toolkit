@@ -81,6 +81,13 @@ try {
     if($desired.Count -eq 0) { Write-Output 'Compliant: all configured Managed Installer rules are disabled and toolkit-owned rules are removed.'; exit 0 }
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
     if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { Write-Output 'Noncompliant: Managed Installer rule collection is not enabled.'; exit 1 }
+    foreach($collectionType in 'Exe','Dll') {
+        $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
+        if($collection.Count -ne 1) { Write-Output "Noncompliant: $collectionType rule collection is missing."; exit 1 }
+        $extensions = $collection[0].RuleCollectionExtensions
+        if([string]$extensions.ThresholdExtensions.Services.EnforcementMode -ne 'Enabled') { Write-Output "Noncompliant: services enforcement is not enabled for the $collectionType rule collection."; exit 1 }
+        if([string]$extensions.RedstoneExtensions.SystemApps.Allow -ne 'Enabled') { Write-Output "Noncompliant: SystemApps is not enabled for the $collectionType rule collection."; exit 1 }
+    }
     foreach($rule in $desired) {
         $node = @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id }) | Select-Object -First 1
         $condition = $node.Conditions.FilePublisherCondition
