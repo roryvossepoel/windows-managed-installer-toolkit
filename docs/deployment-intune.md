@@ -17,7 +17,7 @@ In the Intune admin center:
 4. Enter all five fields, using a verified local binary or the [example library](../library/managed-installers.md) as a starting point.
 5. Assign the profile to a device-based pilot group.
 
-There is no global enable switch. To remove a rule, set its slot to **Disabled**. To explicitly remove all toolkit-owned rules, set every previously used slot to Disabled. If no slots are configured, the scripts intentionally make no changes.
+There is no global enable switch. To remove a rule, set its slot to **Not configured**; detection requests remediation and remediation removes the corresponding toolkit-owned rule. This also works for the final configured slot. Setting a slot to **Disabled** has the same removal effect while retaining an explicit off-state in the profile.
 
 ## 3. Create the Remediation
 
