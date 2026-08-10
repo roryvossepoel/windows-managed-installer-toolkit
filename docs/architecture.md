@@ -22,11 +22,11 @@ The ADMX writes twenty machine-scoped rule slots below `HKLM\Software\Policies\M
 
 Detection validates enabled rule slots, derives a stable GUID from each slot number, compares the full publisher condition with effective AppLocker policy, identifies stale toolkit-owned rules, checks required services, and verifies the compiled Managed Installer policy binary.
 
-Exit code `0` means compliant or intentionally not configured; `1` requests remediation or reports invalid configuration.
+Exit code `0` means the configured intent is compliant. When no slots are configured, detection also verifies that no toolkit-owned rules remain. Exit code `1` requests remediation or reports invalid configuration.
 
 ## Remediation
 
-Remediation removes toolkit-owned local rules, preserves unrelated local rules, builds the desired publisher rules from enabled slots, starts Managed Installer tracking, captures the existing compiled-policy timestamp, merges the enabled Managed Installer collection, waits for the compiled policy to be created or updated, and verifies the effective mode and rule IDs. With configured but Disabled slots it performs cleanup without starting tracking.
+Remediation first checks whether the complete desired state is already compliant and exits without writing when no changes are required. Otherwise it removes toolkit-owned local rules, preserves unrelated local rules, builds the desired publisher rules from enabled slots, starts Managed Installer tracking, captures the existing compiled-policy timestamp, merges the enabled Managed Installer collection, waits for the compiled policy to be created or updated, and verifies the effective mode and rule IDs. With Disabled or Not configured slots it performs cleanup without starting tracking when no enabled slots remain. It also skips the local-policy write when there are no toolkit-owned rules to remove.
 
 ## Ownership and migration
 

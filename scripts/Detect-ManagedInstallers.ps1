@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.0
+# Toolkit version: 0.1.1
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.0'
+$toolkitVersion = '0.1.1'
 Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
@@ -71,15 +71,20 @@ function Get-RuleNodes([xml]$Policy) {
 try {
     Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
     $configuredRuleCount = Get-ConfiguredRuleCount
-    if($configuredRuleCount -eq 0) { Write-Output 'Compliant: no Managed Installer rules are configured; no action requested.'; exit 0 }
-
-    $desired = @(Get-DesiredRules)
-    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
     Write-Output '[Policy] Loading local and effective AppLocker policies.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $knownIds = $dummyRuleIds
     $localOwned = @(Get-RuleNodes $local | Where-Object { $description = [string]$_.Description; ([string]$_.Id -in $knownIds) -or @($managedMarkers | Where-Object {$description.StartsWith($_)}).Count -gt 0 })
+
+    if($configuredRuleCount -eq 0) {
+        if($localOwned.Count -gt 0) { Write-Output 'Noncompliant: no rule slots are configured, but toolkit-owned rules still exist.'; exit 1 }
+        Write-Output 'Compliant: no Managed Installer rules are configured and no toolkit-owned rules remain.'
+        exit 0
+    }
+
+    $desired = @(Get-DesiredRules)
+    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
     $desiredIds = @($desired.Id)
     $stale = @($localOwned | Where-Object { ([string]$_.Id -notin $desiredIds) -and ([string]$_.Id -notin $dummyRuleIds) })
     if($stale.Count -gt 0 -or ($desired.Count -eq 0 -and $localOwned.Count -gt 0)) { Write-Output 'Noncompliant: stale managed rules exist.'; exit 1 }

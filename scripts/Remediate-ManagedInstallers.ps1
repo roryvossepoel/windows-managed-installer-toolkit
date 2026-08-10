@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.0
+# Toolkit version: 0.1.1
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.0'
+$toolkitVersion = '0.1.1'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
@@ -125,24 +125,79 @@ function New-DesiredPolicy([object[]]$Rules) {
 "@
 }
 
+function Test-DesiredState([object[]]$Rules, [xml]$LocalPolicy) {
+    if($Rules.Count -eq 0) { return $false }
+
+    $allowedOwnedIds = @($dummyRuleIds) + @($Rules.Id)
+    foreach($collection in @($LocalPolicy.AppLockerPolicy.RuleCollection)) {
+        foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
+            $description = [string]$node.Description
+            $isOwned = ([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0
+            if($isOwned -and [string]$node.Id -notin $allowedOwnedIds) { return $false }
+        }
+    }
+
+    [xml]$effective = Get-AppLockerPolicy -Effective -Xml
+    $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
+    if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { return $false }
+
+    foreach($collectionType in 'Exe','Dll') {
+        $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
+        if($collection.Count -ne 1) { return $false }
+        if([string]$collection[0].RuleCollectionExtensions.ThresholdExtensions.Services.EnforcementMode -ne 'Enabled') { return $false }
+
+        $registryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2\$collectionType"
+        $registryState = Get-ItemProperty -LiteralPath $registryPath -ErrorAction SilentlyContinue
+        if($null -eq $registryState -or $null -eq $registryState.PSObject.Properties['AllowWindows'] -or [int]$registryState.AllowWindows -ne 0) { return $false }
+    }
+
+    foreach($rule in $Rules) {
+        $node = @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id }) | Select-Object -First 1
+        if($null -eq $node) { return $false }
+        $condition = $node.Conditions.FilePublisherCondition
+        $range = $condition.BinaryVersionRange
+        if([string]$condition.PublisherName -cne $rule.Publisher -or [string]$condition.ProductName -cne $rule.Product -or [string]$condition.BinaryName -cne $rule.Binary -or [string]$range.LowSection -ne $rule.Minimum -or [string]$range.HighSection -ne '*') { return $false }
+    }
+
+    foreach($serviceName in 'AppIDSvc','appid','applockerfltr') {
+        if((Get-Service $serviceName -ErrorAction SilentlyContinue).Status -ne 'Running') { return $false }
+    }
+    return (Test-Path -LiteralPath $managedInstallerPolicyPath)
+}
+
 try {
     Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
     $configuredRuleCount = Get-ConfiguredRuleCount
-    if($configuredRuleCount -eq 0) {
-        Write-Output 'No Managed Installer rules are configured; no changes made.'
+    $desired = if($configuredRuleCount -gt 0) { @(Get-DesiredRules) } else { @() }
+    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    Write-Output '[Policy] Loading the local AppLocker policy and checking for previous toolkit-owned rules.'
+    [xml]$local = Get-AppLockerPolicy -Local -Xml
+    $ownedRuleCount = 0
+    foreach($collection in @($local.AppLockerPolicy.RuleCollection)) {
+        foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
+            $description = [string]$node.Description
+            if(([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0) {
+                $ownedRuleCount++
+            }
+        }
+    }
+
+    if($desired.Count -gt 0 -and (Test-DesiredState -Rules $desired -LocalPolicy $local)) {
+        Write-Output '[Validation] Desired Managed Installer state is already compliant; no changes required.'
         Stop-Transcript | Out-Null
         exit 0
     }
-    $desired = @(Get-DesiredRules)
-    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
-    Write-Output '[Policy] Loading the local AppLocker policy and removing previous toolkit-owned rules.'
-    [xml]$local = Get-AppLockerPolicy -Local -Xml
-    Remove-OwnedRules $local
-    Save-Policy $local
-    Write-Output 'Removed previous package-owned rules while preserving unrelated local AppLocker rules.'
+
+    if($ownedRuleCount -gt 0) {
+        Remove-OwnedRules $local
+        Save-Policy $local
+        Write-Output "Removed $ownedRuleCount previous toolkit-owned rule(s) while preserving unrelated local AppLocker rules."
+    } else {
+        Write-Output 'No previous toolkit-owned rules required removal.'
+    }
 
     if($desired.Count -eq 0) {
-        Write-Output 'All configured Managed Installer rules are disabled; toolkit-owned rules were removed.'
+        Write-Output 'No Managed Installer rule slots are enabled; toolkit-owned rules are absent.'
         Stop-Transcript | Out-Null
         exit 0
     }
