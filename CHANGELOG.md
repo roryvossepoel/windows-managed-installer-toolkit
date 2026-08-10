@@ -6,13 +6,17 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-10
+
+First stable release. The imported ADMX, Intune configuration profile, detection, and remediation flow were validated on an Intune-managed Windows device, including migration from a pre-existing Managed Installer configuration.
+
 ### Changed
 
 - Treat enabled ADMX slots as the authoritative, exclusive state for the complete Managed Installer collection.
 - Detect every additional local or effective Managed Installer rule as noncompliant.
 - Remove all existing local Managed Installer rules during remediation, including rules created by earlier scripts, while preserving unrelated rules in other AppLocker collections.
 - Report when another policy source continues to contribute effective Managed Installer rules.
-- Report toolkit version 0.1.4 in both scripts and documentation.
+- Report toolkit version 1.0.0 in both scripts and documentation.
 
 ### Added
 
@@ -76,7 +80,8 @@ First prerelease of the App Control for Business Managed Installer Toolkit.
 - The toolkit manages the AppLocker Managed Installer configuration used by App Control for Business.
 - It does not create, inspect, modify, convert, or deploy App Control for Business policies.
 
-[Unreleased]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.3...v1.0.0
 [0.1.3]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.0...v0.1.1

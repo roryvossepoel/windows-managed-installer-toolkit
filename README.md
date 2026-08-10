@@ -10,7 +10,7 @@ The toolkit manages the Managed Installer component used by App Control for Busi
 
 ## Release status
 
-The current toolkit version is **0.1.4**. It is published as a prerelease while the complete ADMX, Intune detection, remediation, and Windows Sandbox workflow is being validated. See [CHANGELOG.md](CHANGELOG.md) for release notes.
+The current stable toolkit version is **1.0.0**. The ADMX configuration and Intune detection/remediation workflow have been validated on managed Windows devices. See [CHANGELOG.md](CHANGELOG.md) for release notes or [download the v1.0.0 distribution ZIP](releases/ManagedInstaller-ADMX-v1.0.0.zip).
 
 The toolkit deliberately contains no built-in product presets. The ADMX provides twenty reusable Managed Installer rule slots; administrators copy verified values from the [Managed Installer library](library/managed-installers.md), or collect values from their own signed installer.
 
