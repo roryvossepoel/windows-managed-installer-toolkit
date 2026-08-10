@@ -78,7 +78,16 @@ try {
     $localOwned = @(Get-RuleNodes $local | Where-Object { $description = [string]$_.Description; ([string]$_.Id -in $knownIds) -or @($managedMarkers | Where-Object {$description.StartsWith($_)}).Count -gt 0 })
 
     if($configuredRuleCount -eq 0) {
-        if($localOwned.Count -gt 0) { Write-Output 'Noncompliant: no rule slots are configured, but toolkit-owned rules still exist.'; exit 1 }
+        if($localOwned.Count -gt 0) {
+            $remainingManagedRules = @($localOwned | Where-Object { [string]$_.Id -notin $dummyRuleIds })
+            foreach($remainingRule in $remainingManagedRules) {
+                Write-Output "Noncompliant: no slots are configured, but toolkit rule '$([string]$remainingRule.Name)' still exists."
+            }
+            if($remainingManagedRules.Count -eq 0) {
+                Write-Output 'Noncompliant: no slots are configured, but toolkit infrastructure rules still exist.'
+            }
+            exit 1
+        }
         Write-Output 'Compliant: no Managed Installer rules are configured and no toolkit-owned rules remain.'
         exit 0
     }
