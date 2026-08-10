@@ -8,7 +8,7 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ### Fixed
 
-- Restore and verify the required AppLocker `Services` and `SystemApps` rule collection extensions for EXE and DLL collections.
+- Verify the required AppLocker `Services` extension and registry-backed `SystemApps` state for EXE and DLL collections.
 
 ## [0.1.0] - 2026-08-09
 
