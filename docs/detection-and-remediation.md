@@ -33,6 +33,8 @@ Intune normally invokes remediation only after detection reports noncompliance. 
 
 The scripts contain no product catalog and make no network request. Values originate only from ADMX-backed registry configuration below `HKLM\Software\Policies\ManagedInstallers\Rules`.
 
-## Logging
+## Output and logging
+
+Both scripts include the ADMX slot number and display name for every enabled Managed Installer rule. Detection identifies a missing rule, a stale toolkit rule, or the specific publisher-condition fields that differ. Remediation lists the existing Managed Installer rules it removes and the desired rules it applies. Publisher, product, binary, and version values are not written to standard output to keep Intune results concise.
 
 Remediation writes `%ProgramData%\ManagedInstallers\Remediation.log`. Intune also records script output and exit status.

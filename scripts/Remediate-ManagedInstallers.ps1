@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.2
+# Toolkit version: 0.1.3
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.2'
+$toolkitVersion = '0.1.3'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
@@ -50,7 +50,7 @@ function Get-DesiredRules {
         if(-not (Test-Path $path)) { continue }
         $config = Get-ItemProperty $path
         if($null -eq $config.PSObject.Properties['Enabled'] -or [int]$config.Enabled -ne 1) { continue }
-        $rule = [pscustomobject]@{ Name=([string]$config.Name).Trim(); Publisher=([string]$config.Publisher).Trim(); Product=([string]$config.Product).Trim(); Binary=([string]$config.Binary).Trim().ToUpperInvariant(); Minimum=([string]$config.MinimumVersion).Trim() }
+        $rule = [pscustomobject]@{ Slot=$slot; Name=([string]$config.Name).Trim(); Publisher=([string]$config.Publisher).Trim(); Product=([string]$config.Product).Trim(); Binary=([string]$config.Binary).Trim().ToUpperInvariant(); Minimum=([string]$config.MinimumVersion).Trim() }
         Assert-ManagedInstallerRule $rule
         $rule | Add-Member NoteProperty Id (New-StableGuid "RULE-SLOT-$slot")
         $rules.Add($rule)
@@ -173,25 +173,38 @@ try {
         $desired = @(Get-DesiredRules)
     }
     Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    foreach($rule in $desired) {
+        Write-Output "[Configuration] Enabled rule [$($rule.Slot)]: '$($rule.Name)'."
+    }
     Write-Output '[Policy] Loading the local AppLocker policy and checking for previous toolkit-owned rules.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     $ownedRuleCount = 0
+    $ownedManagedRules = [Collections.Generic.List[object]]::new()
     foreach($collection in @($local.AppLockerPolicy.RuleCollection)) {
         foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
             $description = [string]$node.Description
             if(([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0) {
                 $ownedRuleCount++
+                if($description.StartsWith('ManagedInstallers:Managed')) {
+                    [void]$ownedManagedRules.Add($node)
+                }
             }
         }
     }
 
     if($desired.Count -gt 0 -and (Test-DesiredState -Rules $desired -LocalPolicy $local)) {
+        foreach($rule in $desired) {
+            Write-Output "[Validation] Compliant rule [$($rule.Slot)]: '$($rule.Name)'."
+        }
         Write-Output '[Validation] Desired Managed Installer state is already compliant; no changes required.'
         Stop-Transcript | Out-Null
         exit 0
     }
 
     if($ownedRuleCount -gt 0) {
+        foreach($existingRule in $ownedManagedRules) {
+            Write-Output "[Policy] Removing existing rule: '$([string]$existingRule.Name)'."
+        }
         Remove-OwnedRules $local
         Save-Policy $local
         Write-Output "Removed $ownedRuleCount previous toolkit-owned rule(s) while preserving unrelated local AppLocker rules."
@@ -215,6 +228,9 @@ try {
     } else { $null }
 
     Write-Output "[Policy] Merging $($desired.Count) Managed Installer rule(s) and required EXE/DLL extensions."
+    foreach($rule in $desired) {
+        Write-Output "[Policy] Applying rule [$($rule.Slot)]: '$($rule.Name)'."
+    }
     $desiredPolicy = New-DesiredPolicy $desired
     Save-Policy $desiredPolicy -Merge
 
