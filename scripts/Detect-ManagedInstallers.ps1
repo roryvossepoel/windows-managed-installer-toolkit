@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.2
+# Toolkit version: 0.1.3
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.2'
+$toolkitVersion = '0.1.3'
 Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
@@ -44,7 +44,7 @@ function Get-DesiredRules {
         if(-not (Test-Path $path)) { continue }
         $config = Get-ItemProperty $path
         if($null -eq $config.PSObject.Properties['Enabled'] -or [int]$config.Enabled -ne 1) { continue }
-        $rule = [pscustomobject]@{ Name=([string]$config.Name).Trim(); Publisher=([string]$config.Publisher).Trim(); Product=([string]$config.Product).Trim(); Binary=([string]$config.Binary).Trim().ToUpperInvariant(); Minimum=([string]$config.MinimumVersion).Trim() }
+        $rule = [pscustomobject]@{ Slot=$slot; Name=([string]$config.Name).Trim(); Publisher=([string]$config.Publisher).Trim(); Product=([string]$config.Product).Trim(); Binary=([string]$config.Binary).Trim().ToUpperInvariant(); Minimum=([string]$config.MinimumVersion).Trim() }
         Assert-ManagedInstallerRule $rule
         $rule | Add-Member NoteProperty Id (New-StableGuid "RULE-SLOT-$slot")
         $rules.Add($rule)
@@ -85,9 +85,20 @@ try {
 
     $desired = @(Get-DesiredRules)
     Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    foreach($rule in $desired) {
+        Write-Output "[Configuration] Enabled rule [$($rule.Slot)]: '$($rule.Name)'."
+    }
     $desiredIds = @($desired.Id)
     $stale = @($localOwned | Where-Object { ([string]$_.Id -notin $desiredIds) -and ([string]$_.Id -notin $dummyRuleIds) })
-    if($stale.Count -gt 0 -or ($desired.Count -eq 0 -and $localOwned.Count -gt 0)) { Write-Output 'Noncompliant: stale managed rules exist.'; exit 1 }
+    if($stale.Count -gt 0 -or ($desired.Count -eq 0 -and $localOwned.Count -gt 0)) {
+        foreach($staleRule in $stale) {
+            Write-Output "Noncompliant: stale toolkit rule found: '$([string]$staleRule.Name)'."
+        }
+        if($stale.Count -eq 0) {
+            Write-Output 'Noncompliant: stale toolkit infrastructure rules exist.'
+        }
+        exit 1
+    }
     if($desired.Count -eq 0) { Write-Output 'Compliant: all configured Managed Installer rules are disabled and toolkit-owned rules are removed.'; exit 0 }
     Write-Output '[Policy] Checking the Managed Installer collection and desired publisher rules.'
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
@@ -110,9 +121,23 @@ try {
     }
     foreach($rule in $desired) {
         $node = @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id }) | Select-Object -First 1
+        if($null -eq $node) {
+            Write-Output "Noncompliant: rule [$($rule.Slot)] '$($rule.Name)' is missing."
+            exit 1
+        }
+
         $condition = $node.Conditions.FilePublisherCondition
         $range = $condition.BinaryVersionRange
-        if(-not $node -or [string]$condition.PublisherName -cne $rule.Publisher -or [string]$condition.ProductName -cne $rule.Product -or [string]$condition.BinaryName -cne $rule.Binary -or [string]$range.LowSection -ne $rule.Minimum -or [string]$range.HighSection -ne '*') { Write-Output "Noncompliant: $($rule.Name)"; exit 1 }
+        $differences = [Collections.Generic.List[string]]::new()
+        if([string]$condition.PublisherName -cne $rule.Publisher) { $differences.Add('Publisher') }
+        if([string]$condition.ProductName -cne $rule.Product) { $differences.Add('Product') }
+        if([string]$condition.BinaryName -cne $rule.Binary) { $differences.Add('Binary') }
+        if([string]$range.LowSection -ne $rule.Minimum) { $differences.Add('MinimumVersion') }
+        if([string]$range.HighSection -ne '*') { $differences.Add('MaximumVersion') }
+        if($differences.Count -gt 0) {
+            Write-Output "Noncompliant: rule [$($rule.Slot)] '$($rule.Name)' differs: $($differences -join ', ')."
+            exit 1
+        }
     }
     Write-Output '[Runtime] Checking Managed Installer services.'
     foreach($serviceName in 'AppIDSvc','appid','applockerfltr') { if((Get-Service $serviceName -ErrorAction SilentlyContinue).Status -ne 'Running') { Write-Output "Noncompliant: service $serviceName"; exit 1 } }
