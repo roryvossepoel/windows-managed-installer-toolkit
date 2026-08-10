@@ -22,6 +22,7 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 - Verify the required AppLocker `Services` extension and registry-backed `SystemApps` state for EXE and DLL collections.
 - Detect and remove toolkit-owned rules when the associated slot, including the final slot, becomes Not configured.
+- Skip remediation entirely when the complete desired state is already compliant.
 - Skip unnecessary local AppLocker policy writes when no toolkit-owned rules require removal.
 
 ## [0.1.0] - 2026-08-09
