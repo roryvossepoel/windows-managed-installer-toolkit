@@ -2,14 +2,9 @@
 
 ## AppControl Manager
 
-[AppControl Manager](https://github.com/HotCakeX/Harden-Windows-Security) by HotCakeX is the recommended companion application for creating, reviewing, validating, editing, and deploying App Control for Business policies. It is open source, actively maintained, extensively documented, and also available through the Microsoft Store.
+[AppControl Manager](https://github.com/HotCakeX/Harden-Windows-Security) by HotCakeX is an open-source Windows application for managing App Control for Business policies. It can be used to create base and supplemental policies, configure rule options, edit and merge policies, validate and simulate policies, create rules from files or event data, and deploy policies locally or through Microsoft Intune.
 
-AppControl Manager and this toolkit have separate responsibilities:
-
-- **AppControl Manager** manages App Control for Business policies.
-- **ManagedInstaller-ADMX** manages the AppLocker Managed Installer configuration that can be consumed by App Control for Business.
-
-See the [AppControl Manager documentation](https://github.com/HotCakeX/Harden-Windows-Security/wiki) for its complete feature set and usage guidance.
+See the [AppControl Manager documentation](https://github.com/HotCakeX/Harden-Windows-Security/wiki) for installation instructions and its complete feature set. AppControl Manager is mentioned here as a general App Control for Business policy-management resource; no integration with or dependency on this ADMX toolkit is implied.
 
 ## Origin of the V8 reference script
 
