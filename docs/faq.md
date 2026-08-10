@@ -70,6 +70,44 @@ No. Treat each entry as a starting point and verify it against your deployed bin
 
 Follow [Retrieving publisher information](retrieving-publisher-information.md). Inspect the exact signed executable used in your deployment channel and architecture.
 
+## How do I validate that a Managed Installer is working?
+
+Validate the complete chain rather than only checking that the rule exists:
+
+1. Confirm that detection reports the expected Managed Installer rule as compliant.
+2. Confirm that the App Control for Business policy includes rule option 13, **Enabled: Managed Installer**.
+3. After the Managed Installer policy and tracking services are active, use the designated installer or updater to install or update a test application. Files that existed before tracking was active aren't retroactively tagged.
+4. Select an executable or DLL that was written by that installation and query its NTFS Extended Attributes from an elevated Command Prompt or PowerShell window:
+
+```powershell
+fsutil.exe file queryEA "C:\Program Files\Example Application\Application.exe"
+```
+
+Look for this EA name:
+
+```text
+$KERNEL.SMARTLOCKER.ORIGINCLAIM
+```
+
+In the first data row, every four byte values form a ULONG. For example:
+
+```text
+0000: 01 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00
+```
+
+Interpret the relevant positions as follows:
+
+- The first byte is normally `01`.
+- Byte 5—the first byte of the second ULONG—must be `00` for Managed Installer origin. A value of `01` indicates Intelligent Security Graph origin instead.
+- Byte 9—the first byte of the third ULONG—identifies how the file was created. `00` means it was written directly by a Managed Installer process and can be trusted when the App Control policy enables Managed Installer.
+- A byte 9 value of `02` means **child of child**: the file was created later by software that had itself been installed by a Managed Installer. That file isn't allowed solely on the basis of Managed Installer origin and needs another applicable allow rule. Microsoft notes that rarer values can also represent MI-trusted files.
+
+If `$KERNEL.SMARTLOCKER.ORIGINCLAIM` is absent, verify that the file was actually created during a new installation or update performed by the configured Managed Installer, that the file is on NTFS, and that the required AppLocker services and compiled policies are present. Copying a file or inspecting a file installed before MI tracking was enabled isn't a valid test.
+
+The EA proves that Windows recorded origin information. To validate enforcement as well, test with an active App Control for Business policy that enables Managed Installer and review the Code Integrity operational events. The file must not be blocked by an explicit deny rule, because deny rules take precedence.
+
+See Microsoft's [Managed installer and ISG technical reference and troubleshooting guide](https://learn.microsoft.com/windows/security/application-security/application-control/app-control-for-business/operations/configure-appcontrol-managed-installer) for the authoritative byte layout and troubleshooting steps.
+
 ## Why can self-updates be difficult?
 
 An updater may replace itself with a binary whose product name, executable name, certificate, or version no longer matches the rule. Test the full update chain and choose a minimum version that permits the versions you intend to run.
