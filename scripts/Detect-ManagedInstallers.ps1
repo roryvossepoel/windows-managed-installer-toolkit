@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.4
+# Toolkit version: 1.0.0
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.4'
+$toolkitVersion = '1.0.0'
 Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
