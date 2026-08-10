@@ -86,7 +86,15 @@ try {
         if($collection.Count -ne 1) { Write-Output "Noncompliant: $collectionType rule collection is missing."; exit 1 }
         $extensions = $collection[0].RuleCollectionExtensions
         if([string]$extensions.ThresholdExtensions.Services.EnforcementMode -ne 'Enabled') { Write-Output "Noncompliant: services enforcement is not enabled for the $collectionType rule collection."; exit 1 }
-        if([string]$extensions.RedstoneExtensions.SystemApps.Allow -ne 'Enabled') { Write-Output "Noncompliant: SystemApps is not enabled for the $collectionType rule collection."; exit 1 }
+
+        # Get-AppLockerPolicy doesn't reliably round-trip SystemApps in XML.
+        # Windows stores SystemApps Allow="Enabled" as the AllowWindows enum value 0.
+        $registryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2\$collectionType"
+        $registryState = Get-ItemProperty -LiteralPath $registryPath -ErrorAction SilentlyContinue
+        if($null -eq $registryState -or $null -eq $registryState.PSObject.Properties['AllowWindows'] -or [int]$registryState.AllowWindows -ne 0) {
+            Write-Output "Noncompliant: SystemApps is not enabled for the $collectionType rule collection."
+            exit 1
+        }
     }
     foreach($rule in $desired) {
         $node = @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id }) | Select-Object -First 1
