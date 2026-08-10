@@ -40,6 +40,8 @@ Set the corresponding ADMX setting to **Not configured**. Detection identifies t
 
 Using **Disabled** also removes the rule, but keeps an explicit disabled setting in the assigned profile. It is useful when you want the profile to continue expressing that the slot must remain off. **Not configured** is sufficient for normal removal, including removal of the final configured Managed Installer rule.
 
+Keep the Intune Remediation assigned until detection has reported compliance after the removal. If the ADMX profile and the Remediation assignment are both removed at the same time, no script remains to remove the local toolkit-owned AppLocker rules.
+
 ## Why must every field be filled in?
 
 Publisher rules are safest when constrained by publisher, product, executable, and minimum version. The name is used for readable logs and policy descriptions.
