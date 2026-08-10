@@ -31,10 +31,14 @@ Each slot has a stable rule ID derived from its slot number. Remediation removes
 The individual slots already have three states, so a second master switch would duplicate intent and create conflicting combinations. Configuring one slot activates management automatically.
 
 - **Enabled:** create or update this slot's Managed Installer rule.
-- **Disabled:** ensure this slot's rule is absent.
-- **Not configured:** do not manage this slot.
+- **Disabled:** ensure this slot's rule is absent while retaining an explicit off-state in the profile.
+- **Not configured:** remove a previously managed rule and remove the slot configuration from the profile.
 
-If no slots are configured, both scripts make no changes. For explicit full cleanup, set every previously used slot to Disabled and run remediation before changing them to Not configured.
+## How do I remove a Managed Installer rule?
+
+Set the corresponding ADMX setting to **Not configured**. Detection identifies the toolkit-owned rule that no longer has a configured slot, and remediation removes it while preserving unrelated AppLocker rules.
+
+Using **Disabled** also removes the rule, but keeps an explicit disabled setting in the assigned profile. It is useful when you want the profile to continue expressing that the slot must remain off. **Not configured** is sufficient for normal removal, including removal of the final configured Managed Installer rule.
 
 ## Why must every field be filled in?
 
