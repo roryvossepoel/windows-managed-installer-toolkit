@@ -125,6 +125,46 @@ function New-DesiredPolicy([object[]]$Rules) {
 "@
 }
 
+function Test-DesiredState([object[]]$Rules, [xml]$LocalPolicy) {
+    if($Rules.Count -eq 0) { return $false }
+
+    $allowedOwnedIds = @($dummyRuleIds) + @($Rules.Id)
+    foreach($collection in @($LocalPolicy.AppLockerPolicy.RuleCollection)) {
+        foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
+            $description = [string]$node.Description
+            $isOwned = ([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0
+            if($isOwned -and [string]$node.Id -notin $allowedOwnedIds) { return $false }
+        }
+    }
+
+    [xml]$effective = Get-AppLockerPolicy -Effective -Xml
+    $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
+    if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { return $false }
+
+    foreach($collectionType in 'Exe','Dll') {
+        $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
+        if($collection.Count -ne 1) { return $false }
+        if([string]$collection[0].RuleCollectionExtensions.ThresholdExtensions.Services.EnforcementMode -ne 'Enabled') { return $false }
+
+        $registryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2\$collectionType"
+        $registryState = Get-ItemProperty -LiteralPath $registryPath -ErrorAction SilentlyContinue
+        if($null -eq $registryState -or $null -eq $registryState.PSObject.Properties['AllowWindows'] -or [int]$registryState.AllowWindows -ne 0) { return $false }
+    }
+
+    foreach($rule in $Rules) {
+        $node = @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id }) | Select-Object -First 1
+        if($null -eq $node) { return $false }
+        $condition = $node.Conditions.FilePublisherCondition
+        $range = $condition.BinaryVersionRange
+        if([string]$condition.PublisherName -cne $rule.Publisher -or [string]$condition.ProductName -cne $rule.Product -or [string]$condition.BinaryName -cne $rule.Binary -or [string]$range.LowSection -ne $rule.Minimum -or [string]$range.HighSection -ne '*') { return $false }
+    }
+
+    foreach($serviceName in 'AppIDSvc','appid','applockerfltr') {
+        if((Get-Service $serviceName -ErrorAction SilentlyContinue).Status -ne 'Running') { return $false }
+    }
+    return (Test-Path -LiteralPath $managedInstallerPolicyPath)
+}
+
 try {
     Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
     $configuredRuleCount = Get-ConfiguredRuleCount
@@ -140,6 +180,12 @@ try {
                 $ownedRuleCount++
             }
         }
+    }
+
+    if($desired.Count -gt 0 -and (Test-DesiredState -Rules $desired -LocalPolicy $local)) {
+        Write-Output '[Validation] Desired Managed Installer state is already compliant; no changes required.'
+        Stop-Transcript | Out-Null
+        exit 0
     }
 
     if($ownedRuleCount -gt 0) {
