@@ -6,6 +6,10 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+### Added
+
+- Add FAQ guidance for validating Managed Installer origin with `fsutil file queryEA`, distinguishing MI from ISG origin, and interpreting direct versus child-of-child creation.
+
 ## [0.1.3] - 2026-08-10
 
 ### Added

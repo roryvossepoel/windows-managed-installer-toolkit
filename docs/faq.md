@@ -26,14 +26,6 @@ For a broadly shared repository, keeping twenty slots avoids an unwieldy Adminis
 
 Each slot has a stable rule ID derived from its slot number. Remediation removes the old toolkit-owned form and writes the desired form, so field changes do not create duplicates.
 
-## Why is there no global enable switch?
-
-The individual slots already have three states, so a second master switch would duplicate intent and create conflicting combinations. Configuring one slot activates management automatically.
-
-- **Enabled:** create or update this slot's Managed Installer rule.
-- **Disabled:** ensure this slot's rule is absent while retaining an explicit off-state in the profile.
-- **Not configured:** remove a previously managed rule and remove the slot configuration from the profile.
-
 ## How do I remove a Managed Installer rule?
 
 Set the corresponding ADMX setting to **Not configured**. Detection identifies the toolkit-owned rule that no longer has a configured slot, and remediation removes it while preserving unrelated AppLocker rules.
@@ -69,6 +61,44 @@ No. Treat each entry as a starting point and verify it against your deployed bin
 ## How do I find the exact publisher values?
 
 Follow [Retrieving publisher information](retrieving-publisher-information.md). Inspect the exact signed executable used in your deployment channel and architecture.
+
+## How do I validate that a Managed Installer is working?
+
+Validate the complete chain rather than only checking that the rule exists:
+
+1. Confirm that detection reports the expected Managed Installer rule as compliant.
+2. Confirm that the App Control for Business policy includes rule option 13, **Enabled: Managed Installer**.
+3. After the Managed Installer policy and tracking services are active, use the designated installer or updater to install or update a test application. Files that existed before tracking was active aren't retroactively tagged.
+4. Select an executable or DLL that was written by that installation and query its NTFS Extended Attributes from an elevated Command Prompt or PowerShell window:
+
+```powershell
+fsutil.exe file queryEA "C:\Program Files\Example Application\Application.exe"
+```
+
+Look for this EA name:
+
+```text
+$KERNEL.SMARTLOCKER.ORIGINCLAIM
+```
+
+In the first data row, every four byte values form a ULONG. For example:
+
+```text
+0000: 01 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00
+```
+
+Interpret the relevant positions as follows:
+
+- The first byte is normally `01`.
+- Byte 5—the first byte of the second ULONG—must be `00` for Managed Installer origin. A value of `01` indicates Intelligent Security Graph origin instead.
+- Byte 9—the first byte of the third ULONG—identifies how the file was created. `00` means it was written directly by a Managed Installer process and can be trusted when the App Control policy enables Managed Installer.
+- A byte 9 value of `02` means **child of child**: the file was created later by software that had itself been installed by a Managed Installer. That file isn't allowed solely on the basis of Managed Installer origin and needs another applicable allow rule. Microsoft notes that rarer values can also represent MI-trusted files.
+
+If `$KERNEL.SMARTLOCKER.ORIGINCLAIM` is absent, verify that the file was actually created during a new installation or update performed by the configured Managed Installer, that the file is on NTFS, and that the required AppLocker services and compiled policies are present. Copying a file or inspecting a file installed before MI tracking was enabled isn't a valid test.
+
+The EA proves that Windows recorded origin information. To validate enforcement as well, test with an active App Control for Business policy that enables Managed Installer and review the Code Integrity operational events. The file must not be blocked by an explicit deny rule, because deny rules take precedence.
+
+See Microsoft's [Managed installer and ISG technical reference and troubleshooting guide](https://learn.microsoft.com/windows/security/application-security/application-control/app-control-for-business/operations/configure-appcontrol-managed-installer) for the authoritative byte layout and troubleshooting steps.
 
 ## Why can self-updates be difficult?
 
