@@ -10,7 +10,7 @@ The toolkit manages the Managed Installer component used by App Control for Busi
 
 ## Release status
 
-The current toolkit version is **0.1.0**. It is published as a prerelease while the complete ADMX, Intune detection, remediation, and Windows Sandbox workflow is being validated. See [CHANGELOG.md](CHANGELOG.md) for release notes.
+The current toolkit version is **0.1.1**. It is published as a prerelease while the complete ADMX, Intune detection, remediation, and Windows Sandbox workflow is being validated. See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 The toolkit deliberately contains no built-in product presets. The ADMX provides twenty reusable Managed Installer rule slots; administrators copy verified values from the [Managed Installer library](library/managed-installers.md), or collect values from their own signed installer.
 
@@ -40,7 +40,9 @@ Each slot contains Display name, Publisher name, Product name, Binary name, and 
 4. Deploy `scripts/Detect-ManagedInstallers.ps1` and `scripts/Remediate-ManagedInstallers.ps1` as an Intune Remediation, running as SYSTEM in 64-bit PowerShell.
 5. Start with a test group and verify the effective AppLocker policy before broad deployment.
 
-Each rule is three-state. **Enabled** creates or updates that rule, **Disabled** removes it, and **Not configured** leaves that slot unmanaged. If no slots are configured, the scripts make no changes. Setting every previously used slot to Disabled provides explicit cleanup.
+Each rule is three-state. **Enabled** creates or updates that rule. **Disabled** and **Not configured** both cause a previously managed rule in that slot to be removed during remediation. Use Disabled when you want the configuration profile to express an explicit off-state; use Not configured when the slot no longer needs to be represented in the profile.
+
+If no slots remain configured, detection still checks for toolkit-owned rules and remediation removes any that remain. Unrelated local AppLocker rules are preserved.
 
 ## Safety boundaries
 
