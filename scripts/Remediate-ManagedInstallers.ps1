@@ -126,12 +126,16 @@ function New-DesiredPolicy([object[]]$Rules) {
 }
 
 try {
-    if((Get-ConfiguredRuleCount) -eq 0) {
+    Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
+    $configuredRuleCount = Get-ConfiguredRuleCount
+    if($configuredRuleCount -eq 0) {
         Write-Output 'No Managed Installer rules are configured; no changes made.'
         Stop-Transcript | Out-Null
         exit 0
     }
     $desired = @(Get-DesiredRules)
+    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    Write-Output '[Policy] Loading the local AppLocker policy and removing previous toolkit-owned rules.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     Remove-OwnedRules $local
     Save-Policy $local
@@ -143,6 +147,7 @@ try {
         exit 0
     }
 
+    Write-Output '[Runtime] Starting Managed Installer tracking and required AppLocker services.'
     $appidtelPath = if([Environment]::Is64BitProcess) { "$env:windir\System32\appidtel.exe" } else { "$env:windir\Sysnative\appidtel.exe" }
     $appidtel = Start-Process $appidtelPath -ArgumentList 'start -mionly' -Wait -PassThru -WindowStyle Hidden
     if($appidtel.ExitCode -ne 0) { throw "appidtel.exe failed with exit code $($appidtel.ExitCode)." }
@@ -151,10 +156,14 @@ try {
         (Get-Item -LiteralPath $managedInstallerPolicyPath -ErrorAction Stop).LastWriteTimeUtc
     } else { $null }
 
+    Write-Output "[Policy] Merging $($desired.Count) Managed Installer rule(s) and required EXE/DLL extensions."
     $desiredPolicy = New-DesiredPolicy $desired
     Save-Policy $desiredPolicy -Merge
 
-    $deadline = (Get-Date).AddSeconds($policyBinaryTimeoutSeconds)
+    Write-Output "[Runtime] Waiting up to $policyBinaryTimeoutSeconds seconds for services and the compiled Managed Installer policy."
+    $waitStarted = Get-Date
+    $lastProgressSeconds = -30
+    $deadline = $waitStarted.AddSeconds($policyBinaryTimeoutSeconds)
     do {
         $running = @('AppIDSvc','appid','applockerfltr' | Where-Object { (Get-Service $_ -ErrorAction SilentlyContinue).Status -eq 'Running' }).Count
         $policyBinaryUpdated = $false
@@ -162,12 +171,19 @@ try {
             $currentBinaryTimestamp = (Get-Item -LiteralPath $managedInstallerPolicyPath -ErrorAction Stop).LastWriteTimeUtc
             $policyBinaryUpdated = ($null -eq $previousBinaryTimestamp) -or ($currentBinaryTimestamp -gt $previousBinaryTimestamp)
         }
+        $elapsedSeconds = [int]((Get-Date) - $waitStarted).TotalSeconds
+        if($elapsedSeconds -ge ($lastProgressSeconds + 30)) {
+            $binaryStatus = if($policyBinaryUpdated) { 'ready' } else { 'waiting' }
+            Write-Output "[Runtime] Elapsed: $elapsedSeconds s; services running: $running/3; compiled policy: $binaryStatus."
+            $lastProgressSeconds = $elapsedSeconds
+        }
         if($running -eq 3 -and $policyBinaryUpdated) { break }
         Start-Sleep 5
     } while((Get-Date) -lt $deadline)
     if($running -ne 3) { throw 'Timed out waiting for Managed Installer services.' }
     if(-not $policyBinaryUpdated) { throw "Managed Installer policy binary was not created or updated within $policyBinaryTimeoutSeconds seconds: $managedInstallerPolicyPath" }
 
+    Write-Output '[Validation] Checking effective rules, collection extensions, registry state, and services.'
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
     if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { throw 'Managed Installer rule collection is not enabled after remediation.' }
