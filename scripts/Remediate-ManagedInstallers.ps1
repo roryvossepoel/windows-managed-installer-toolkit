@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.4
+# Toolkit version: 1.0.0
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.4'
+$toolkitVersion = '1.0.0'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
