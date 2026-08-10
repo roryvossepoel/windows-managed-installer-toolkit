@@ -24,15 +24,21 @@ For a broadly shared repository, keeping twenty slots avoids an unwieldy Adminis
 
 ## What happens when I change a slot?
 
-Each slot has a stable rule ID derived from its slot number. Remediation removes the old toolkit-owned form and writes the desired form, so field changes do not create duplicates.
+Each slot has a stable rule ID derived from its slot number. Remediation rebuilds the Managed Installer collection from the enabled slots, so field changes do not create duplicates.
 
 ## How do I remove a Managed Installer rule?
 
-Set the corresponding ADMX setting to **Not configured**. Detection identifies the toolkit-owned rule that no longer has a configured slot, and remediation removes it while preserving unrelated AppLocker rules.
+Set the corresponding ADMX setting to **Not configured**. Detection identifies that the current Managed Installer collection no longer matches the enabled slots. Remediation rebuilds the complete Managed Installer collection while preserving unrelated rules in the other AppLocker collections.
 
 Using **Disabled** also removes the rule, but keeps an explicit disabled setting in the assigned profile. It is useful when you want the profile to continue expressing that the slot must remain off. **Not configured** is sufficient for normal removal, including removal of the final configured Managed Installer rule.
 
-Keep the Intune Remediation assigned until detection has reported compliance after the removal. If the ADMX profile and the Remediation assignment are both removed at the same time, no script remains to remove the local toolkit-owned AppLocker rules.
+Keep the Intune Remediation assigned until detection has reported compliance after the removal. If the ADMX profile and the Remediation assignment are both removed at the same time, no script remains to remove the local Managed Installer rules.
+
+## What happens to existing Managed Installer rules?
+
+The enabled ADMX slots are authoritative for the entire Managed Installer collection. Detection treats every additional rule as noncompliant. Remediation removes all existing local Managed Installer rules—including rules created by older scripts—and then applies only the enabled slots.
+
+This exclusivity doesn't apply to the EXE, DLL, MSI, Script, or packaged-app rule collections. Apart from the toolkit's required EXE/DLL infrastructure rules, unrelated rules in those collections are preserved. Don't combine this toolkit with another policy source that independently manages Managed Installer rules: if another source adds rules to the effective policy, detection remains noncompliant and remediation reports the conflict.
 
 ## Why must every field be filled in?
 
