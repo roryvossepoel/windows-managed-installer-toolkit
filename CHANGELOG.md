@@ -6,6 +6,10 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+### Added
+
+- Add concise phase and wait-progress output to detection and remediation runs.
+
 ### Fixed
 
 - Verify the required AppLocker `Services` extension and registry-backed `SystemApps` state for EXE and DLL collections.
