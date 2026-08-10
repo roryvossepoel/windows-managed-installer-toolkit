@@ -29,7 +29,7 @@
 6. Wait for the three required services and for `ManagedInstaller.AppLocker` to be created or updated.
 7. Verify that the effective collection is Enabled, contains every desired rule ID, and has the required EXE/DLL extensions and registry-backed SystemApps state.
 
-Intune normally invokes remediation only after detection reports noncompliance. Running remediation manually while already compliant is safe, but unnecessary: enabled rules are reconciled again using their stable slot IDs and no duplicates are created.
+Intune normally invokes remediation only after detection reports noncompliance. When remediation is started manually, it first validates the complete desired state. If that state is already compliant, it reports that no changes are required and exits without rewriting or recompiling the policy.
 
 The scripts contain no product catalog and make no network request. Values originate only from ADMX-backed registry configuration below `HKLM\Software\Policies\ManagedInstallers\Rules`.
 
