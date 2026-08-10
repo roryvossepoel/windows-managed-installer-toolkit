@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.1
+# Toolkit version: 0.1.2
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.1'
+$toolkitVersion = '0.1.2'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
@@ -168,7 +168,10 @@ function Test-DesiredState([object[]]$Rules, [xml]$LocalPolicy) {
 try {
     Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
     $configuredRuleCount = Get-ConfiguredRuleCount
-    $desired = if($configuredRuleCount -gt 0) { @(Get-DesiredRules) } else { @() }
+    [object[]]$desired = @()
+    if($configuredRuleCount -gt 0) {
+        $desired = @(Get-DesiredRules)
+    }
     Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
     Write-Output '[Policy] Loading the local AppLocker policy and checking for previous toolkit-owned rules.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml

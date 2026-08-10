@@ -6,6 +6,12 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-10
+
+### Fixed
+
+- Preserve the desired rule set as an array when exactly one Managed Installer slot is enabled, restoring rule counts and the compliant no-op remediation path.
+
 ## [0.1.1] - 2026-08-10
 
 ### Added
@@ -50,6 +56,7 @@ First prerelease of the App Control for Business Managed Installer Toolkit.
 - The toolkit manages the AppLocker Managed Installer configuration used by App Control for Business.
 - It does not create, inspect, modify, convert, or deploy App Control for Business policies.
 
-[Unreleased]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/roryvossepoel/ManagedInstaller-ADMX/releases/tag/v0.1.0
