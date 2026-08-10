@@ -26,14 +26,6 @@ For a broadly shared repository, keeping twenty slots avoids an unwieldy Adminis
 
 Each slot has a stable rule ID derived from its slot number. Remediation removes the old toolkit-owned form and writes the desired form, so field changes do not create duplicates.
 
-## Why is there no global enable switch?
-
-The individual slots already have three states, so a second master switch would duplicate intent and create conflicting combinations. Configuring one slot activates management automatically.
-
-- **Enabled:** create or update this slot's Managed Installer rule.
-- **Disabled:** ensure this slot's rule is absent while retaining an explicit off-state in the profile.
-- **Not configured:** remove a previously managed rule and remove the slot configuration from the profile.
-
 ## How do I remove a Managed Installer rule?
 
 Set the corresponding ADMX setting to **Not configured**. Detection identifies the toolkit-owned rule that no longer has a configured slot, and remediation removes it while preserving unrelated AppLocker rules.
