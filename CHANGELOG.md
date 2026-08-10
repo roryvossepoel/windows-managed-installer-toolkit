@@ -6,6 +6,10 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+### Fixed
+
+- Restore and verify the required AppLocker `Services` and `SystemApps` rule collection extensions for EXE and DLL collections.
+
 ## [0.1.0] - 2026-08-09
 
 First prerelease of the App Control for Business Managed Installer Toolkit.
