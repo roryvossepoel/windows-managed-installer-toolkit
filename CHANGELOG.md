@@ -6,6 +6,14 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+### Changed
+
+- Treat enabled ADMX slots as the authoritative, exclusive state for the complete Managed Installer collection.
+- Detect every additional local or effective Managed Installer rule as noncompliant.
+- Remove all existing local Managed Installer rules during remediation, including rules created by earlier scripts, while preserving unrelated rules in other AppLocker collections.
+- Report when another policy source continues to contribute effective Managed Installer rules.
+- Report toolkit version 0.1.4 in both scripts and documentation.
+
 ### Added
 
 - Add FAQ guidance for validating Managed Installer origin with `fsutil file queryEA`, distinguishing MI from ISG origin, and interpreting direct versus child-of-child creation.

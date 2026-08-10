@@ -12,11 +12,22 @@ Get-ChildItem 'HKLM:\Software\Policies\ManagedInstallers' -Recurse |
     }
 ```
 
-Rule configuration is stored below `HKLM:\Software\Policies\ManagedInstallers\Rules\01` through `20`. If none of these slots contains an `Enabled` value, detection returns compliant and remediation makes no changes.
+Rule configuration is stored below `HKLM:\Software\Policies\ManagedInstallers\Rules\01` through `20`. If none of these slots contains an `Enabled` value, detection expects the Managed Installer collection to be empty and remediation removes any existing local Managed Installer rules.
 
 ## No enabled rules
 
-This is valid when one or more configured slots are Disabled. Remediation removes toolkit-owned rules and exits successfully. Use this as the explicit cleanup state before changing all slots to Not Configured.
+This is valid when one or more configured slots are Disabled. Remediation removes the complete local Managed Installer collection and exits successfully. Use this as the explicit cleanup state before changing all slots to Not Configured.
+
+## Unexpected Managed Installer rules remain
+
+The enabled ADMX slots are the complete desired state. Inspect both policy views:
+
+```powershell
+Get-AppLockerPolicy -Local -Xml
+Get-AppLockerPolicy -Effective -Xml
+```
+
+Rules present in Local are removed during remediation. If an additional rule exists only in Effective, another policy source such as domain Group Policy or MDM is contributing it. Remove the conflicting Managed Installer configuration at its source; repeatedly changing the local registry won't override that policy source.
 
 ## Invalid Managed Installer rule
 

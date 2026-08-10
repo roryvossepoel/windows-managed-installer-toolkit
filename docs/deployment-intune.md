@@ -17,7 +17,7 @@ In the Intune admin center:
 4. Enter all five fields, using a verified local binary or the [example library](../library/managed-installers.md) as a starting point.
 5. Assign the profile to a device-based pilot group.
 
-There is no global enable switch. To remove a rule, set its slot to **Not configured**; detection requests remediation and remediation removes the corresponding toolkit-owned rule. This also works for the final configured slot. Setting a slot to **Disabled** has the same removal effect while retaining an explicit off-state in the profile.
+There is no global enable switch. To remove a rule, set its slot to **Not configured**; detection requests remediation and remediation rebuilds the Managed Installer collection without that rule. This also works for the final configured slot. Setting a slot to **Disabled** has the same removal effect while retaining an explicit off-state in the profile.
 
 ## 3. Create the Remediation
 
@@ -42,9 +42,10 @@ The App Control base policy must include rule option 13, **Enabled: Managed Inst
 Validate at least:
 
 1. a device without an existing AppLocker policy;
-2. a device with unrelated local AppLocker rules;
-3. rule-slot addition, modification, disablement, and reuse;
-4. minimum-version enforcement;
+2. a device with existing Managed Installer rules from an older script, confirming they are removed;
+3. a device with unrelated rules in other AppLocker collections, confirming they are preserved;
+4. rule-slot addition, modification, disablement, and reuse;
+5. minimum-version enforcement;
 6. per-slot `Not Configured`, `Enabled`, and `Disabled` behavior;
 7. application installation and subsequent update behavior;
 8. AppLocker and Code Integrity event logs.

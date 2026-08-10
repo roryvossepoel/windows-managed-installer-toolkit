@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.3
+# Toolkit version: 0.1.4
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.3'
+$toolkitVersion = '0.1.4'
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
@@ -70,13 +70,15 @@ function Get-ConfiguredRuleCount {
     return $count
 }
 
-function Remove-OwnedRules([xml]$Policy) {
-    $knownIds = $dummyRuleIds
+function Remove-ReconciledRules([xml]$Policy) {
     foreach($collection in @($Policy.AppLockerPolicy.RuleCollection)) {
         $removedFromCollection = $false
         foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' })) {
             $description = [string]$node.Description
-            if(([string]$node.Id -in $knownIds) -or @($managedMarkers | Where-Object {$description.StartsWith($_)}).Count -gt 0) {
+            $removeNode = ([string]$collection.Type -eq 'ManagedInstaller') -or
+                ([string]$node.Id -in $dummyRuleIds) -or
+                @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0
+            if($removeNode) {
                 [void]$collection.RemoveChild($node)
                 $removedFromCollection = $true
             }
@@ -128,18 +130,20 @@ function New-DesiredPolicy([object[]]$Rules) {
 function Test-DesiredState([object[]]$Rules, [xml]$LocalPolicy) {
     if($Rules.Count -eq 0) { return $false }
 
-    $allowedOwnedIds = @($dummyRuleIds) + @($Rules.Id)
-    foreach($collection in @($LocalPolicy.AppLockerPolicy.RuleCollection)) {
-        foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
-            $description = [string]$node.Description
-            $isOwned = ([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0
-            if($isOwned -and [string]$node.Id -notin $allowedOwnedIds) { return $false }
-        }
-    }
+    $localManagedRules = @(
+        $LocalPolicy.AppLockerPolicy.RuleCollection |
+            Where-Object Type -eq 'ManagedInstaller' |
+            ForEach-Object { @($_.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' }) }
+    )
+    if($localManagedRules.Count -ne $Rules.Count) { return $false }
+    if(@($localManagedRules | Where-Object { [string]$_.Id -notin @($Rules.Id) }).Count -gt 0) { return $false }
 
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
     if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { return $false }
+    $effectiveManagedRules = @($mi[0].ChildNodes | Where-Object { $_.LocalName -match 'Rule$' })
+    if($effectiveManagedRules.Count -ne $Rules.Count) { return $false }
+    if(@($effectiveManagedRules | Where-Object { [string]$_.Id -notin @($Rules.Id) }).Count -gt 0) { return $false }
 
     foreach($collectionType in 'Exe','Dll') {
         $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
@@ -176,17 +180,18 @@ try {
     foreach($rule in $desired) {
         Write-Output "[Configuration] Enabled rule [$($rule.Slot)]: '$($rule.Name)'."
     }
-    Write-Output '[Policy] Loading the local AppLocker policy and checking for previous toolkit-owned rules.'
+    Write-Output '[Policy] Loading the local AppLocker policy and checking the complete Managed Installer collection.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
-    $ownedRuleCount = 0
-    $ownedManagedRules = [Collections.Generic.List[object]]::new()
+    $reconciledRuleCount = 0
+    $existingManagedRules = [Collections.Generic.List[object]]::new()
     foreach($collection in @($local.AppLockerPolicy.RuleCollection)) {
         foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
             $description = [string]$node.Description
-            if(([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0) {
-                $ownedRuleCount++
-                if($description.StartsWith('ManagedInstallers:Managed')) {
-                    [void]$ownedManagedRules.Add($node)
+            $isManagedInstallerRule = [string]$collection.Type -eq 'ManagedInstaller'
+            if($isManagedInstallerRule -or ([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0) {
+                $reconciledRuleCount++
+                if($isManagedInstallerRule) {
+                    [void]$existingManagedRules.Add($node)
                 }
             }
         }
@@ -201,19 +206,28 @@ try {
         exit 0
     }
 
-    if($ownedRuleCount -gt 0) {
-        foreach($existingRule in $ownedManagedRules) {
-            Write-Output "[Policy] Removing existing rule: '$([string]$existingRule.Name)'."
+    if($reconciledRuleCount -gt 0) {
+        foreach($existingRule in $existingManagedRules) {
+            Write-Output "[Policy] Removing existing Managed Installer rule: '$([string]$existingRule.Name)'."
         }
-        Remove-OwnedRules $local
+        Remove-ReconciledRules $local
         Save-Policy $local
-        Write-Output "Removed $ownedRuleCount previous toolkit-owned rule(s) while preserving unrelated local AppLocker rules."
+        Write-Output "Removed $reconciledRuleCount reconciled rule(s). Unrelated EXE, DLL, MSI, Script, and packaged-app rules were preserved."
     } else {
-        Write-Output 'No previous toolkit-owned rules required removal.'
+        Write-Output 'No existing Managed Installer or toolkit infrastructure rules required removal.'
     }
 
     if($desired.Count -eq 0) {
-        Write-Output 'No Managed Installer rule slots are enabled; toolkit-owned rules are absent.'
+        [xml]$effectiveAfterCleanup = Get-AppLockerPolicy -Effective -Xml
+        $remainingEffectiveRules = @(
+            $effectiveAfterCleanup.AppLockerPolicy.RuleCollection |
+                Where-Object Type -eq 'ManagedInstaller' |
+                ForEach-Object { @($_.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' }) }
+        )
+        if($remainingEffectiveRules.Count -gt 0) {
+            throw "Managed Installer cleanup is being overridden by another policy source; $($remainingEffectiveRules.Count) effective rule(s) remain."
+        }
+        Write-Output 'No Managed Installer rule slots are enabled; the Managed Installer collection is empty.'
         Stop-Transcript | Out-Null
         exit 0
     }
@@ -275,8 +289,16 @@ try {
             throw "SystemApps is not enabled for the $collectionType rule collection after remediation."
         }
     }
+    $effectiveManagedRules = @($mi[0].ChildNodes | Where-Object { $_.LocalName -match 'Rule$' })
+    if($effectiveManagedRules.Count -ne $desired.Count) {
+        throw "Effective Managed Installer collection contains $($effectiveManagedRules.Count) rule(s); expected $($desired.Count). Another policy source may be contributing rules."
+    }
+    $unexpectedEffectiveRules = @($effectiveManagedRules | Where-Object { [string]$_.Id -notin @($desired.Id) })
+    if($unexpectedEffectiveRules.Count -gt 0) {
+        throw "Unexpected effective Managed Installer rule remains: '$([string]$unexpectedEffectiveRules[0].Name)'."
+    }
     foreach($rule in $desired) {
-        if(-not @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id })) { throw "Rule missing after remediation: $($rule.Name)" }
+        if(-not @($mi[0].ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id })) { throw "Rule missing after remediation: $($rule.Name)" }
     }
     Write-Output "Successfully reconciled $($desired.Count) Managed Installer rule(s)."
     Stop-Transcript | Out-Null

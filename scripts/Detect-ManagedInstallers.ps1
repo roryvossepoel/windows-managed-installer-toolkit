@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 0.1.3
+# Toolkit version: 0.1.4
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '0.1.3'
+$toolkitVersion = '0.1.4'
 Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
@@ -74,21 +74,30 @@ try {
     Write-Output '[Policy] Loading local and effective AppLocker policies.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
-    $knownIds = $dummyRuleIds
-    $localOwned = @(Get-RuleNodes $local | Where-Object { $description = [string]$_.Description; ([string]$_.Id -in $knownIds) -or @($managedMarkers | Where-Object {$description.StartsWith($_)}).Count -gt 0 })
+    $localManagedRules = @(
+        $local.AppLockerPolicy.RuleCollection |
+            Where-Object Type -eq 'ManagedInstaller' |
+            ForEach-Object { @($_.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' }) }
+    )
+    $localInfrastructureRules = @(Get-RuleNodes $local | Where-Object { [string]$_.Id -in $dummyRuleIds })
+    $localReconciledRules = @($localManagedRules) + @($localInfrastructureRules)
+    $effectiveManagedCollections = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
+    $effectiveManagedRules = @(
+        $effectiveManagedCollections |
+            ForEach-Object { @($_.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' }) }
+    )
 
     if($configuredRuleCount -eq 0) {
-        if($localOwned.Count -gt 0) {
-            $remainingManagedRules = @($localOwned | Where-Object { [string]$_.Id -notin $dummyRuleIds })
-            foreach($remainingRule in $remainingManagedRules) {
-                Write-Output "Noncompliant: no slots are configured, but toolkit rule '$([string]$remainingRule.Name)' still exists."
+        if($localReconciledRules.Count -gt 0 -or $effectiveManagedRules.Count -gt 0) {
+            foreach($remainingRule in $effectiveManagedRules) {
+                Write-Output "Noncompliant: no slots are configured, but Managed Installer rule '$([string]$remainingRule.Name)' still exists."
             }
-            if($remainingManagedRules.Count -eq 0) {
-                Write-Output 'Noncompliant: no slots are configured, but toolkit infrastructure rules still exist.'
+            if($effectiveManagedRules.Count -eq 0) {
+                Write-Output 'Noncompliant: no slots are configured, but Managed Installer infrastructure rules still exist locally.'
             }
             exit 1
         }
-        Write-Output 'Compliant: no Managed Installer rules are configured and no toolkit-owned rules remain.'
+        Write-Output 'Compliant: no Managed Installer rules are configured and no reconciled rules remain.'
         exit 0
     }
 
@@ -98,20 +107,36 @@ try {
         Write-Output "[Configuration] Enabled rule [$($rule.Slot)]: '$($rule.Name)'."
     }
     $desiredIds = @($desired.Id)
-    $stale = @($localOwned | Where-Object { ([string]$_.Id -notin $desiredIds) -and ([string]$_.Id -notin $dummyRuleIds) })
-    if($stale.Count -gt 0 -or ($desired.Count -eq 0 -and $localOwned.Count -gt 0)) {
+    $stale = @($localManagedRules | Where-Object { [string]$_.Id -notin $desiredIds })
+    if($stale.Count -gt 0) {
         foreach($staleRule in $stale) {
-            Write-Output "Noncompliant: stale toolkit rule found: '$([string]$staleRule.Name)'."
-        }
-        if($stale.Count -eq 0) {
-            Write-Output 'Noncompliant: stale toolkit infrastructure rules exist.'
+            Write-Output "Noncompliant: unmanaged or stale Managed Installer rule found: '$([string]$staleRule.Name)'."
         }
         exit 1
     }
-    if($desired.Count -eq 0) { Write-Output 'Compliant: all configured Managed Installer rules are disabled and toolkit-owned rules are removed.'; exit 0 }
+    if($desired.Count -eq 0) {
+        if($effectiveManagedRules.Count -gt 0 -or $localInfrastructureRules.Count -gt 0) {
+            Write-Output 'Noncompliant: all configured slots are disabled, but Managed Installer rules or infrastructure remain.'
+            exit 1
+        }
+        Write-Output 'Compliant: all configured Managed Installer rules are disabled and the Managed Installer collection is empty.'
+        exit 0
+    }
     Write-Output '[Policy] Checking the Managed Installer collection and desired publisher rules.'
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
     if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { Write-Output 'Noncompliant: Managed Installer rule collection is not enabled.'; exit 1 }
+    $effectiveRuleNodes = @($mi[0].ChildNodes | Where-Object { $_.LocalName -match 'Rule$' })
+    $unexpectedRules = @($effectiveRuleNodes | Where-Object { [string]$_.Id -notin $desiredIds })
+    if($unexpectedRules.Count -gt 0) {
+        foreach($unexpectedRule in $unexpectedRules) {
+            Write-Output "Noncompliant: unmanaged or stale effective Managed Installer rule found: '$([string]$unexpectedRule.Name)'."
+        }
+        exit 1
+    }
+    if($effectiveRuleNodes.Count -ne $desired.Count) {
+        Write-Output "Noncompliant: effective Managed Installer collection contains $($effectiveRuleNodes.Count) rule(s); expected $($desired.Count)."
+        exit 1
+    }
     Write-Output '[Policy] Checking EXE and DLL service enforcement and SystemApps state.'
     foreach($collectionType in 'Exe','Dll') {
         $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
