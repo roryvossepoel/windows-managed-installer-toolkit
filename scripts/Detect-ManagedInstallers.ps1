@@ -69,8 +69,13 @@ function Get-RuleNodes([xml]$Policy) {
 }
 
 try {
-    if((Get-ConfiguredRuleCount) -eq 0) { Write-Output 'Compliant: no Managed Installer rules are configured; no action requested.'; exit 0 }
+    Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
+    $configuredRuleCount = Get-ConfiguredRuleCount
+    if($configuredRuleCount -eq 0) { Write-Output 'Compliant: no Managed Installer rules are configured; no action requested.'; exit 0 }
+
     $desired = @(Get-DesiredRules)
+    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    Write-Output '[Policy] Loading local and effective AppLocker policies.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $knownIds = $dummyRuleIds
@@ -79,14 +84,24 @@ try {
     $stale = @($localOwned | Where-Object { ([string]$_.Id -notin $desiredIds) -and ([string]$_.Id -notin $dummyRuleIds) })
     if($stale.Count -gt 0 -or ($desired.Count -eq 0 -and $localOwned.Count -gt 0)) { Write-Output 'Noncompliant: stale managed rules exist.'; exit 1 }
     if($desired.Count -eq 0) { Write-Output 'Compliant: all configured Managed Installer rules are disabled and toolkit-owned rules are removed.'; exit 0 }
+    Write-Output '[Policy] Checking the Managed Installer collection and desired publisher rules.'
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
     if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { Write-Output 'Noncompliant: Managed Installer rule collection is not enabled.'; exit 1 }
+    Write-Output '[Policy] Checking EXE and DLL service enforcement and SystemApps state.'
     foreach($collectionType in 'Exe','Dll') {
         $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
         if($collection.Count -ne 1) { Write-Output "Noncompliant: $collectionType rule collection is missing."; exit 1 }
         $extensions = $collection[0].RuleCollectionExtensions
         if([string]$extensions.ThresholdExtensions.Services.EnforcementMode -ne 'Enabled') { Write-Output "Noncompliant: services enforcement is not enabled for the $collectionType rule collection."; exit 1 }
-        if([string]$extensions.RedstoneExtensions.SystemApps.Allow -ne 'Enabled') { Write-Output "Noncompliant: SystemApps is not enabled for the $collectionType rule collection."; exit 1 }
+
+        # Get-AppLockerPolicy doesn't reliably round-trip SystemApps in XML.
+        # Windows stores SystemApps Allow="Enabled" as the AllowWindows enum value 0.
+        $registryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\SrpV2\$collectionType"
+        $registryState = Get-ItemProperty -LiteralPath $registryPath -ErrorAction SilentlyContinue
+        if($null -eq $registryState -or $null -eq $registryState.PSObject.Properties['AllowWindows'] -or [int]$registryState.AllowWindows -ne 0) {
+            Write-Output "Noncompliant: SystemApps is not enabled for the $collectionType rule collection."
+            exit 1
+        }
     }
     foreach($rule in $desired) {
         $node = @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id }) | Select-Object -First 1
@@ -94,7 +109,9 @@ try {
         $range = $condition.BinaryVersionRange
         if(-not $node -or [string]$condition.PublisherName -cne $rule.Publisher -or [string]$condition.ProductName -cne $rule.Product -or [string]$condition.BinaryName -cne $rule.Binary -or [string]$range.LowSection -ne $rule.Minimum -or [string]$range.HighSection -ne '*') { Write-Output "Noncompliant: $($rule.Name)"; exit 1 }
     }
+    Write-Output '[Runtime] Checking Managed Installer services.'
     foreach($serviceName in 'AppIDSvc','appid','applockerfltr') { if((Get-Service $serviceName -ErrorAction SilentlyContinue).Status -ne 'Running') { Write-Output "Noncompliant: service $serviceName"; exit 1 } }
+    Write-Output '[Runtime] Checking the compiled Managed Installer policy.'
     $binaryRoot = if([Environment]::Is64BitProcess) { "$env:windir\System32" } else { "$env:windir\Sysnative" }
     $managedInstallerPolicyPath = Join-Path $binaryRoot 'AppLocker\ManagedInstaller.AppLocker'
     if(-not (Test-Path -LiteralPath $managedInstallerPolicyPath)) { Write-Output "Noncompliant: compiled policy missing: $managedInstallerPolicyPath"; exit 1 }
