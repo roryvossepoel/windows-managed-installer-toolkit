@@ -98,6 +98,31 @@ function Save-Policy([xml]$Policy, [switch]$Merge) {
 
 function ConvertTo-XmlText([string]$Value) { return [Security.SecurityElement]::Escape($Value) }
 
+function Get-OrAddXmlElement([xml]$Document, [System.Xml.XmlNode]$Parent, [string]$Name) {
+    $element = @($Parent.ChildNodes | Where-Object { $_.LocalName -eq $Name }) | Select-Object -First 1
+    if(-not $element) {
+        $element = $Document.CreateElement($Name)
+        [void]$Parent.AppendChild($element)
+    }
+    return $element
+}
+
+function Set-RequiredRuleCollectionExtensions([xml]$Policy) {
+    foreach($collectionType in 'Exe','Dll') {
+        $collection = @($Policy.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType) | Select-Object -First 1
+        if(-not $collection) { throw "$collectionType rule collection is missing while applying required extensions." }
+
+        $extensions = Get-OrAddXmlElement $Policy $collection 'RuleCollectionExtensions'
+        $threshold = Get-OrAddXmlElement $Policy $extensions 'ThresholdExtensions'
+        $services = Get-OrAddXmlElement $Policy $threshold 'Services'
+        $services.SetAttribute('EnforcementMode', 'Enabled')
+
+        $redstone = Get-OrAddXmlElement $Policy $extensions 'RedstoneExtensions'
+        $systemApps = Get-OrAddXmlElement $Policy $redstone 'SystemApps'
+        $systemApps.SetAttribute('Allow', 'Enabled')
+    }
+}
+
 function New-DesiredPolicy([object[]]$Rules) {
     $ruleXml = foreach($rule in $Rules) {
         $id = ConvertTo-XmlText $rule.Id; $name = ConvertTo-XmlText $rule.Name; $publisher = ConvertTo-XmlText $rule.Publisher
@@ -154,6 +179,13 @@ try {
     $desiredPolicy = New-DesiredPolicy $desired
     Save-Policy $desiredPolicy -Merge
 
+    # Set-AppLockerPolicy -Merge can retain an existing empty RedstoneExtensions
+    # element. Normalize the complete local policy so both required extensions
+    # are present without removing unrelated local AppLocker rules.
+    [xml]$normalizedLocalPolicy = Get-AppLockerPolicy -Local -Xml
+    Set-RequiredRuleCollectionExtensions $normalizedLocalPolicy
+    Save-Policy $normalizedLocalPolicy
+
     $deadline = (Get-Date).AddSeconds($policyBinaryTimeoutSeconds)
     do {
         $running = @('AppIDSvc','appid','applockerfltr' | Where-Object { (Get-Service $_ -ErrorAction SilentlyContinue).Status -eq 'Running' }).Count
@@ -171,6 +203,13 @@ try {
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
     $mi = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq 'ManagedInstaller')
     if($mi.Count -ne 1 -or [string]$mi[0].EnforcementMode -ne 'Enabled') { throw 'Managed Installer rule collection is not enabled after remediation.' }
+    foreach($collectionType in 'Exe','Dll') {
+        $collection = @($effective.AppLockerPolicy.RuleCollection | Where-Object Type -eq $collectionType)
+        if($collection.Count -ne 1) { throw "$collectionType rule collection is missing after remediation." }
+        $extensions = $collection[0].RuleCollectionExtensions
+        if([string]$extensions.ThresholdExtensions.Services.EnforcementMode -ne 'Enabled') { throw "Services enforcement is not enabled for the $collectionType rule collection after remediation." }
+        if([string]$extensions.RedstoneExtensions.SystemApps.Allow -ne 'Enabled') { throw "SystemApps is not enabled for the $collectionType rule collection after remediation." }
+    }
     foreach($rule in $desired) {
         if(-not @($mi.ChildNodes | Where-Object { $_.LocalName -eq 'FilePublisherRule' -and [string]$_.Id -eq $rule.Id })) { throw "Rule missing after remediation: $($rule.Name)" }
     }
