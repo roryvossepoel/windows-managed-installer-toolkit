@@ -14,6 +14,12 @@ Vendor metadata and minimum versions change more often than policy structure. Ke
 
 No. Copy the five values you want into one of the Managed Installer rule slots. Endpoints have no runtime dependency on GitHub and keep the values assigned through policy until you change them.
 
+## Can I use the toolkit without importing the ADMX?
+
+Yes. Set `$configurationMode = 'Embedded'` in both scripts and place the desired rules in the embedded JSON block. The ADMX and configuration profile aren't used in this mode. Detection and remediation must contain identical JSON and should report the same configuration fingerprint. See [Embedded configuration](embedded-configuration.md).
+
+There is intentionally no automatic fallback from Policy to Embedded mode. An explicit mode prevents stale registry values or an accidental empty configuration from silently changing the Managed Installer trust boundary.
+
 ## Why are there twenty slots?
 
 Classic ADMX presentation elements cannot dynamically add repeated structured records. Twenty fixed, clearly labeled slots provide native fields and predictable registry locations without asking administrators to paste JSON into Group Policy or Intune.
@@ -36,7 +42,7 @@ Keep the Intune Remediation assigned until detection has reported compliance aft
 
 ## What happens to existing Managed Installer rules?
 
-The enabled ADMX slots are authoritative for the entire Managed Installer collection. Detection treats every additional rule as noncompliant. Remediation removes all existing local Managed Installer rules—including rules created by older scripts—and then applies only the enabled slots.
+The selected configuration source is authoritative for the entire Managed Installer collection. In Policy mode those are the enabled ADMX slots; in Embedded mode those are the JSON entries. Detection treats every additional rule as noncompliant. Remediation removes all existing local Managed Installer rules—including rules created by older scripts—and then applies only the desired rules.
 
 This exclusivity doesn't apply to the EXE, DLL, MSI, Script, or packaged-app rule collections. Apart from the toolkit's required EXE/DLL infrastructure rules, unrelated rules in those collections are preserved. Don't combine this toolkit with another policy source that independently manages Managed Installer rules: if another source adds rules to the effective policy, detection remains noncompliant and remediation reports the conflict.
 
