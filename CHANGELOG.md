@@ -6,6 +6,8 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-24
+
 ### Added
 
 - Add an explicit `Embedded` configuration mode for Intune deployments that don't use the custom ADMX.
