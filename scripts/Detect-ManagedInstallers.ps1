@@ -1,10 +1,30 @@
 #requires -version 5.1
 
-# Toolkit version: 1.0.0
+# Toolkit version: 1.1.0
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '1.0.0'
+$toolkitVersion = '1.1.0'
 Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
+
+# Configuration mode: Policy or Embedded.
+# Policy reads ADMX-backed settings from the registry. Embedded reads the JSON
+# block below. Keep the complete Embedded block identical in both scripts.
+$configurationMode = 'Policy'
+$embeddedConfigurationVersion = '1.0'
+$allowEmptyEmbeddedConfiguration = $false
+$embeddedManagedInstallersJson = @'
+[
+  {
+    "Slot": "01",
+    "Name": "Example Software Agent",
+    "Publisher": "O=EXAMPLE ORGANIZATION, L=EXAMPLE CITY, C=US",
+    "Product": "EXAMPLE SOFTWARE AGENT",
+    "Binary": "EXAMPLEAGENT.EXE",
+    "MinimumVersion": "1.0.0.0"
+  }
+]
+'@
+
 $policyRoot = 'HKLM:\Software\Policies\ManagedInstallers'
 $managedMarkers = @('ManagedInstallers:')
 $dummyRuleIds = @('86f235ad-3f7b-4121-bc95-ea8bde3a5db5', '9420c496-046d-45ab-bd0e-455b2649e41e')
@@ -64,13 +84,83 @@ function Get-ConfiguredRuleCount {
     return $count
 }
 
+function Get-EmbeddedRules {
+    $trimmedJson = $embeddedManagedInstallersJson.Trim()
+    if(-not ($trimmedJson.StartsWith('[') -and $trimmedJson.EndsWith(']'))) {
+        throw 'Embedded Managed Installer configuration must be a JSON array enclosed in [ and ].'
+    }
+    try {
+        $entries = @($embeddedManagedInstallersJson | ConvertFrom-Json -ErrorAction Stop)
+    }
+    catch {
+        throw "Embedded Managed Installer JSON is invalid: $($_.Exception.Message)"
+    }
+
+    if($entries.Count -eq 0 -and -not $allowEmptyEmbeddedConfiguration) {
+        throw 'Embedded configuration is empty. Set $allowEmptyEmbeddedConfiguration to $true in both scripts only when complete Managed Installer cleanup is intended.'
+    }
+
+    $rules = [Collections.Generic.List[object]]::new()
+    $usedSlots = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach($entry in $entries) {
+        $slot = ([string]$entry.Slot).Trim()
+        if($slot -notmatch '^(0[1-9]|1[0-9]|20)$') { throw "Invalid embedded slot '$slot'. Use a unique value from 01 through 20." }
+        if(-not $usedSlots.Add($slot)) { throw "Duplicate embedded slot '$slot'." }
+
+        $rule = [pscustomobject]@{
+            Slot = $slot
+            Name = ([string]$entry.Name).Trim()
+            Publisher = ([string]$entry.Publisher).Trim()
+            Product = ([string]$entry.Product).Trim()
+            Binary = ([string]$entry.Binary).Trim().ToUpperInvariant()
+            Minimum = ([string]$entry.MinimumVersion).Trim()
+        }
+        Assert-ManagedInstallerRule $rule
+        $rule | Add-Member NoteProperty Id (New-StableGuid "RULE-SLOT-$slot")
+        $rules.Add($rule)
+    }
+    return @($rules | Sort-Object Slot)
+}
+
+function Get-ConfigurationFingerprint([object[]]$Rules) {
+    $canonicalRules = @($Rules | Sort-Object Slot | ForEach-Object {
+        [ordered]@{ Slot=$_.Slot; Name=$_.Name; Publisher=$_.Publisher; Product=$_.Product; Binary=$_.Binary; MinimumVersion=$_.Minimum; Id=$_.Id }
+    })
+    $json = ConvertTo-Json -InputObject $canonicalRules -Depth 4 -Compress
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { $hash = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($json)) }
+    finally { $sha.Dispose() }
+    return (($hash | ForEach-Object { $_.ToString('x2') }) -join '').Substring(0, 12).ToUpperInvariant()
+}
+
+function Get-ConfigurationState {
+    switch($configurationMode.Trim().ToUpperInvariant()) {
+        'POLICY' {
+            $configuredCount = Get-ConfiguredRuleCount
+            $rules = if($configuredCount -gt 0) { @(Get-DesiredRules) } else { @() }
+            return [pscustomobject]@{ Mode='Policy'; Version='ADMX'; ConfiguredCount=$configuredCount; Rules=@($rules) }
+        }
+        'EMBEDDED' {
+            if([string]::IsNullOrWhiteSpace($embeddedConfigurationVersion)) { throw 'Embedded configuration version is empty.' }
+            $rules = @(Get-EmbeddedRules)
+            return [pscustomobject]@{ Mode='Embedded'; Version=$embeddedConfigurationVersion; ConfiguredCount=$rules.Count; Rules=@($rules) }
+        }
+        default { throw "Invalid configuration mode '$configurationMode'. Use Policy or Embedded." }
+    }
+}
+
 function Get-RuleNodes([xml]$Policy) {
     @($Policy.AppLockerPolicy.RuleCollection | ForEach-Object { @($_.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' }) })
 }
 
 try {
-    Write-Output '[Configuration] Reading Managed Installer settings from the policy registry.'
-    $configuredRuleCount = Get-ConfiguredRuleCount
+    Write-Output '[Configuration] Reading Managed Installer settings.'
+    $configuration = Get-ConfigurationState
+    $configuredRuleCount = $configuration.ConfiguredCount
+    [object[]]$desired = @($configuration.Rules)
+    Write-Output "[Configuration] Mode: $($configuration.Mode)."
+    if($configuration.Mode -eq 'Embedded') { Write-Output "[Configuration] Embedded configuration version: $($configuration.Version)." }
+    Write-Output "[Configuration] Fingerprint: $(Get-ConfigurationFingerprint -Rules $desired)."
     Write-Output '[Policy] Loading local and effective AppLocker policies.'
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     [xml]$effective = Get-AppLockerPolicy -Effective -Xml
@@ -90,10 +180,10 @@ try {
     if($configuredRuleCount -eq 0) {
         if($localReconciledRules.Count -gt 0 -or $effectiveManagedRules.Count -gt 0) {
             foreach($remainingRule in $effectiveManagedRules) {
-                Write-Output "Noncompliant: no slots are configured, but Managed Installer rule '$([string]$remainingRule.Name)' still exists."
+                Write-Output "Noncompliant: no rules are configured, but Managed Installer rule '$([string]$remainingRule.Name)' still exists."
             }
             if($effectiveManagedRules.Count -eq 0) {
-                Write-Output 'Noncompliant: no slots are configured, but Managed Installer infrastructure rules still exist locally.'
+                Write-Output 'Noncompliant: no rules are configured, but Managed Installer infrastructure rules still exist locally.'
             }
             exit 1
         }
@@ -101,8 +191,11 @@ try {
         exit 0
     }
 
-    $desired = @(Get-DesiredRules)
-    Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    if($configuration.Mode -eq 'Policy') {
+        Write-Output "[Configuration] Found $configuredRuleCount configured slot(s), of which $($desired.Count) are enabled."
+    } else {
+        Write-Output "[Configuration] Found $($desired.Count) embedded Managed Installer rule(s)."
+    }
     foreach($rule in $desired) {
         Write-Output "[Configuration] Enabled rule [$($rule.Slot)]: '$($rule.Name)'."
     }

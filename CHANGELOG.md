@@ -6,6 +6,18 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+### Added
+
+- Add an explicit `Embedded` configuration mode for Intune deployments that don't use the custom ADMX.
+- Add validated JSON configuration blocks to both scripts with a generic example rule.
+- Add configuration version and SHA-256 fingerprint output to help verify that detection and remediation use identical embedded configuration.
+- Add fail-safe handling that rejects an empty embedded configuration unless intentional cleanup is explicitly enabled in both scripts.
+- Document Policy and Embedded deployment modes.
+
+### Changed
+
+- Report toolkit version 1.1.0 in both scripts.
+
 ## [1.0.0] - 2026-08-10
 
 First stable release. The imported ADMX, Intune configuration profile, detection, and remediation flow were validated on an Intune-managed Windows device, including migration from a pre-existing Managed Installer configuration.

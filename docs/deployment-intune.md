@@ -1,5 +1,7 @@
 # Deploy with Microsoft Intune
 
+This page describes the default Policy mode. To deploy without importing an ADMX, follow [Embedded configuration](embedded-configuration.md) and continue at step 3.
+
 ## 1. Import the Administrative Template
 
 In the Intune admin center:
@@ -32,6 +34,8 @@ Create an Intune Remediation with:
 | Run in 64-bit PowerShell | Yes |
 
 Use a conservative schedule during the pilot. A daily schedule is normally sufficient after deployment stabilizes.
+
+Both uploaded scripts must use the same `$configurationMode`. In Embedded mode, also verify that the configuration version and fingerprint reported by both scripts match.
 
 ## 4. App Control prerequisite
 

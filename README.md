@@ -1,6 +1,6 @@
 # App Control for Business Managed Installer Toolkit
 
-Manage Managed Installers for App Control for Business through Microsoft Intune. The toolkit provides an ADMX/ADML for configuration profiles plus detection and remediation scripts that translate the configured rule slots into the local AppLocker Managed Installer policy.
+Manage Managed Installers for App Control for Business through Microsoft Intune. The toolkit provides detection and remediation scripts with two configuration modes: ADMX-backed policy settings or an embedded JSON configuration for deployments that don't use a custom ADMX.
 
 Managed Installer is a powerful but underused Windows trust mechanism. Intune's built-in controls currently expose only the Intune Management Extension as a Managed Installer. This toolkit makes additional, deliberately selected installer and update services centrally configurable while keeping every trust decision explicit.
 
@@ -34,11 +34,26 @@ Each slot contains Display name, Publisher name, Product name, Binary name, and 
 
 ## Quick start
 
+Choose one configuration mode and use the same mode in both scripts.
+
+### Policy mode (default)
+
 1. Import `admx/ManagedInstallers.admx` and `admx/en-US/ManagedInstallers.adml` into Intune.
 2. Create a device configuration profile from the imported administrative template.
 3. Enable at least one **Managed Installer 01–20** setting and enter all five fields. You can copy an example from the [library](library/managed-installers.md).
 4. Deploy `scripts/Detect-ManagedInstallers.ps1` and `scripts/Remediate-ManagedInstallers.ps1` as an Intune Remediation, running as SYSTEM in 64-bit PowerShell.
 5. Start with a test group and verify the effective AppLocker policy before broad deployment.
+
+### Embedded mode (without ADMX)
+
+1. Open both PowerShell scripts.
+2. Set `$configurationMode = 'Embedded'` in both scripts.
+3. Replace `$embeddedManagedInstallersJson` with the same desired rules in both scripts.
+4. Give `$embeddedConfigurationVersion` the same value in both scripts.
+5. Deploy both scripts as an Intune Remediation, running as SYSTEM in 64-bit PowerShell.
+6. Confirm that detection and remediation report the same configuration fingerprint.
+
+See [Embedded configuration](docs/embedded-configuration.md) for the complete procedure and safety behavior.
 
 Each rule is three-state. **Enabled** creates or updates that rule. **Disabled** and **Not configured** both cause a previously managed rule in that slot to be removed during remediation. Use Disabled when you want the configuration profile to express an explicit off-state; use Not configured when the slot no longer needs to be represented in the profile.
 
@@ -55,6 +70,7 @@ The scripts accept signed publisher rules only. They reject wildcards, paths, an
 - [Architecture](docs/architecture.md)
 - [Intune deployment](docs/deployment-intune.md)
 - [Detection and remediation](docs/detection-and-remediation.md)
+- [Embedded configuration without ADMX](docs/embedded-configuration.md)
 - [Creating Managed Installer rules](docs/custom-rules.md)
 - [Retrieving publisher information](docs/retrieving-publisher-information.md)
 - [Troubleshooting](docs/troubleshooting.md)

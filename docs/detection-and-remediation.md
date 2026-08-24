@@ -1,5 +1,12 @@
 # Detection and remediation
 
+Both scripts support two explicit configuration modes:
+
+- `Policy` reads ADMX-backed registry values below `HKLM\Software\Policies\ManagedInstallers\Rules`.
+- `Embedded` reads the JSON block stored in each script and doesn't require the ADMX or a configuration profile.
+
+There is no automatic fallback between modes. The same mode and, for Embedded mode, exactly the same JSON must be used in both scripts.
+
 | Rule-slot state | Detection | Remediation |
 |---|---|---|
 | No slots configured, no Managed Installer or toolkit infrastructure rules present | Returns compliant | Makes no changes |
@@ -10,7 +17,7 @@
 
 ## Detection flow
 
-1. Determine whether any rule slot is configured.
+1. Load and validate the selected configuration source.
 2. Load the local policy and detect Managed Installer rules and toolkit infrastructure rules, including rules whose slots became Not configured.
 3. Read enabled slots and validate every field.
 4. Derive a stable rule ID from each slot number.
@@ -31,10 +38,10 @@
 
 Intune normally invokes remediation only after detection reports noncompliance. When remediation is started manually, it first validates the complete desired state. If that state is already compliant, it reports that no changes are required and exits without rewriting or recompiling the policy.
 
-The scripts contain no product catalog and make no network request. Values originate only from ADMX-backed registry configuration below `HKLM\Software\Policies\ManagedInstallers\Rules`.
+The scripts contain no product catalog and make no network request. Values originate from either ADMX-backed registry configuration or the embedded JSON block, depending on the explicit configuration mode.
 
 ## Output and logging
 
-Both scripts include the ADMX slot number and display name for every enabled Managed Installer rule. Detection identifies a missing rule, any additional local or effective Managed Installer rule, or the specific publisher-condition fields that differ. Remediation lists every existing Managed Installer rule it removes and the desired rules it applies. The enabled ADMX slots are the exclusive desired state for the Managed Installer collection. Publisher, product, binary, and version values are not written to standard output to keep Intune results concise.
+Both scripts report the selected mode, configuration fingerprint, slot number, and display name for every Managed Installer rule. Embedded mode also reports its administrator-defined configuration version. Detection identifies a missing rule, any additional local or effective Managed Installer rule, or the specific publisher-condition fields that differ. Remediation lists every existing Managed Installer rule it removes and the desired rules it applies. The selected configuration source is the exclusive desired state for the Managed Installer collection. Publisher, product, binary, and version values are not written to standard output to keep Intune results concise.
 
 Remediation writes `%ProgramData%\ManagedInstallers\Remediation.log`. Intune also records script output and exit status.
