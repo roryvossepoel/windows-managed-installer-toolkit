@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 1.1.0
+# Toolkit version: 1.1.1
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '1.1.0'
+$toolkitVersion = '1.1.1'
 Write-Output "App Control for Business Managed Installer Toolkit version $toolkitVersion"
 
 # Configuration mode: Policy or Embedded.
