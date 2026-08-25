@@ -6,6 +6,13 @@ The project follows [Semantic Versioning](https://semver.org/). Git tags use the
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-25
+
+### Fixed
+
+- Handle empty or minimal local AppLocker policy XML without calling methods on null node properties.
+- Report the PowerShell script stack trace when remediation fails to make troubleshooting easier.
+
 ## [1.1.0] - 2026-08-24
 
 ### Added
