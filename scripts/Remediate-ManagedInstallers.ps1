@@ -1,9 +1,9 @@
 #requires -version 5.1
 
-# Toolkit version: 1.1.0
+# Toolkit version: 1.1.1
 
 $ErrorActionPreference = 'Stop'
-$toolkitVersion = '1.1.0'
+$toolkitVersion = '1.1.1'
 
 # Configuration mode: Policy or Embedded.
 # Policy reads ADMX-backed settings from the registry. Embedded reads the JSON
@@ -156,7 +156,7 @@ function Get-ConfigurationState {
 }
 
 function Remove-ReconciledRules([xml]$Policy) {
-    foreach($collection in @($Policy.AppLockerPolicy.RuleCollection)) {
+    foreach($collection in @($Policy.AppLockerPolicy.RuleCollection | Where-Object { $null -ne $_ })) {
         $removedFromCollection = $false
         foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName -match 'Rule$' })) {
             $description = [string]$node.Description
@@ -274,8 +274,8 @@ try {
     [xml]$local = Get-AppLockerPolicy -Local -Xml
     $reconciledRuleCount = 0
     $existingManagedRules = [Collections.Generic.List[object]]::new()
-    foreach($collection in @($local.AppLockerPolicy.RuleCollection)) {
-        foreach($node in @($collection.ChildNodes | Where-Object { $_.LocalName.EndsWith('Rule') })) {
+    foreach($collection in @($local.AppLockerPolicy.RuleCollection | Where-Object { $null -ne $_ })) {
+        foreach($node in @($collection.ChildNodes | Where-Object { [string]$_.LocalName -match 'Rule$' })) {
             $description = [string]$node.Description
             $isManagedInstallerRule = [string]$collection.Type -eq 'ManagedInstaller'
             if($isManagedInstallerRule -or ([string]$node.Id -in $dummyRuleIds) -or @($managedMarkers | Where-Object { $description.StartsWith($_) }).Count -gt 0) {
@@ -395,7 +395,10 @@ try {
     exit 0
 }
 catch {
-    Write-Error $_.Exception.Message
+    Write-Output "[Error] $($_.Exception.Message)"
+    if(-not [string]::IsNullOrWhiteSpace($_.ScriptStackTrace)) {
+        Write-Output "[Diagnostics] $($_.ScriptStackTrace)"
+    }
     try { Stop-Transcript | Out-Null } catch {}
     exit 1
 }
